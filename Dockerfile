@@ -1,13 +1,15 @@
 # Next.js standalone on Railway / any Node host
 FROM node:22-alpine AS deps
 WORKDIR /app
-RUN corepack enable
+# Pin pnpm 10 to match CI. Unpinned corepack pulls pnpm 12+, which rejects
+# freshly published lockfile packages (ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION).
+RUN npm install -g pnpm@10
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
 WORKDIR /app
-RUN corepack enable
+RUN npm install -g pnpm@10
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
