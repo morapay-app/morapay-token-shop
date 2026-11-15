@@ -3,14 +3,14 @@
  * Does NOT place orders.
  */
 import { getRampConfig, getQuote, isTokenSupported } from "../lib/morapay/ramp";
-import milan from "../examples/milan.config";
+import amem from "../examples/amem.config";
 
 async function main() {
   const config = await getRampConfig();
   const supported = isTokenSupported(
     config,
-    milan.token.chainId,
-    milan.token.contract,
+    amem.token.chainId,
+    amem.token.contract,
   );
   const corridors = config.supportedCurrencies.map((c) => c.toLowerCase());
   console.log(
@@ -29,7 +29,7 @@ async function main() {
     action: "ONRAMP",
     inputAmount: "100",
     inputCurrency: "GHS",
-    outputCurrency: "MILAN",
+    outputCurrency: "AMEM",
     chain: "56",
   });
   console.log(

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { RiskDisclaimer } from "@/components/RiskDisclaimer";
@@ -5,6 +6,11 @@ import { HowItWorks } from "@/components/HowItWorks";
 import { TokenInfo } from "@/components/TokenInfo";
 import { Faq } from "@/components/Faq";
 import { BuyWidget } from "@/components/BuyWidget/BuyWidget";
+import {
+  CultureMarquee,
+  CultureRail,
+  CultureStageBrand,
+} from "@/components/CultureRails";
 import { shopConfig } from "@/shop.config";
 
 export default function HomePage() {
@@ -12,6 +18,8 @@ export default function HomePage() {
     "${ticker}",
     `$${shopConfig.token.ticker}`,
   );
+  const culture =
+    shopConfig.culture?.enabled === false ? undefined : shopConfig.culture;
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -43,25 +51,69 @@ export default function HomePage() {
   };
 
   return (
-    <main>
-      <Header />
-      <section className="w-full max-w-[480px] mx-auto px-4 pt-4 pb-6">
-        <div className="hero-band p-6 mb-5 text-[var(--brand-accent-text)]">
-          <p
-            className="inline-block text-xs font-medium px-3 py-1 rounded-full mb-3"
-            style={{ background: "color-mix(in srgb, var(--brand-accent) 85%, black)" }}
-          >
-            ${shopConfig.token.ticker}
-          </p>
-          <h1 className="font-heading text-3xl font-bold leading-tight mb-2">
-            {headline}
-          </h1>
-          {shopConfig.brand.subline && (
-            <p className="text-sm" style={{ color: "color-mix(in srgb, var(--brand-accent-text) 88%, transparent)" }}>{shopConfig.brand.subline}</p>
-          )}
-        </div>
-        <BuyWidget />
-      </section>
+    <main className={culture ? "shop-with-culture" : undefined}>
+      {culture ? (
+        <section
+          className="culture-stage"
+          style={
+            {
+              "--culture-bg": culture.stageBg ?? "#0A0A0A",
+              "--culture-text": culture.stageText ?? "#F5F1E6",
+              "--culture-accent": culture.accent ?? shopConfig.brand.accent,
+            } as CSSProperties
+          }
+        >
+          <Header onCulture />
+          <CultureMarquee items={culture.marquee} />
+          <div className="culture-stage-grid">
+            <CultureRail blocks={culture.left} side="left" />
+            <div className="culture-stage-center">
+              <CultureStageBrand
+                culture={culture}
+                ticker={shopConfig.token.ticker}
+              />
+              {culture.visual ? (
+                <div className="culture-visual" aria-hidden="true">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={culture.visual}
+                    alt=""
+                    width={900}
+                    height={600}
+                  />
+                </div>
+              ) : null}
+              <p className="culture-buy-kicker">{headline}</p>
+              {shopConfig.brand.subline ? (
+                <p className="culture-buy-sub">{shopConfig.brand.subline}</p>
+              ) : null}
+              <BuyWidget />
+            </div>
+            <CultureRail blocks={culture.right} side="right" />
+          </div>
+        </section>
+      ) : (
+        <>
+          <Header />
+          <section className="w-full max-w-[480px] mx-auto px-4 pt-4 pb-6">
+            <div className="hero-band p-6 mb-5 text-[var(--brand-accent-text)]">
+              <p
+                className="inline-block text-xs font-medium px-3 py-1 rounded-full mb-3 text-[var(--brand-accent-text)]"
+                style={{ background: "var(--brand-accent)" }}
+              >
+                ${shopConfig.token.ticker}
+              </p>
+              <h1 className="font-heading text-3xl font-bold leading-tight mb-2">
+                {headline}
+              </h1>
+              {shopConfig.brand.subline && (
+                <p className="text-sm opacity-90">{shopConfig.brand.subline}</p>
+              )}
+            </div>
+            <BuyWidget />
+          </section>
+        </>
+      )}
       <HowItWorks />
       <TokenInfo />
       <Faq />

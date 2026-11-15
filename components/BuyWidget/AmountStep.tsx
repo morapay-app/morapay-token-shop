@@ -7,6 +7,7 @@ type Props = {
   currency: string;
   amount: string;
   quote: QuoteView | null;
+  quoteLoading?: boolean;
   quickAmounts: number[];
   limits?: { minFiat: number; maxFiat: number };
   showFee: boolean;
@@ -89,8 +90,16 @@ export function AmountStep(props: Props) {
         ))}
       </div>
 
-      <div className="subcard p-4" aria-live="polite">
-        {props.quote ? (
+      <div className="subcard p-4" aria-live="polite" aria-busy={props.quoteLoading}>
+        {props.quoteLoading ? (
+          <div className="space-y-3" role="status">
+            <span className="sr-only">Fetching quote</span>
+            <div className="skeleton h-8 w-3/4 rounded-lg" />
+            <div className="skeleton h-4 w-1/2 rounded-md" />
+            <div className="skeleton h-4 w-2/5 rounded-md" />
+            <p className="text-sm text-[var(--mp-text-muted)]">Getting quote…</p>
+          </div>
+        ) : props.quote ? (
           <>
             <p className="font-numbers text-2xl font-extrabold">
               ≈{" "}

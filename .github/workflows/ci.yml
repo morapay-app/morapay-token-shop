@@ -17,8 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        # version from package.json packageManager
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -30,8 +29,8 @@ jobs:
       - run: pnpm build
         env:
           MORAPAY_API_BASE: https://api.morapay.io
-          SHOP_ID: milanthepug
-          NEXT_PUBLIC_SITE_URL: https://milanthepug.com
+          SHOP_ID: theafricanmeme
+          NEXT_PUBLIC_SITE_URL: https://token-shop-production-ecd0135d.up.railway.app
           FORCE_FALLBACK: "true"
 
   e2e:
@@ -41,8 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        # version from package.json packageManager
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -52,12 +50,12 @@ jobs:
       - run: pnpm build
         env:
           MORAPAY_API_BASE: https://api.morapay.io
-          SHOP_ID: milanthepug
+          SHOP_ID: theafricanmeme
           NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
           FORCE_FALLBACK: "true"
       - run: pnpm test:e2e
         env:
           MORAPAY_API_BASE: https://api.morapay.io
-          SHOP_ID: milanthepug
+          SHOP_ID: theafricanmeme
           NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
           FORCE_FALLBACK: "true"

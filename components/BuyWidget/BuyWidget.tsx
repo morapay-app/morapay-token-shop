@@ -12,6 +12,7 @@ import { BankDepositStep } from "./BankDepositStep";
 import { StatusStep } from "./StatusStep";
 import { TelegramFallback } from "@/components/TelegramFallback";
 import { track } from "@/lib/analytics";
+import { WAIT_TOTAL_MS } from "@/lib/wait-phases";
 
 type ShopApiConfig = {
   token: {
@@ -56,11 +57,15 @@ function persistOrder(ref: string, wallet: string) {
 export function BuyWidget() {
   const [config, setConfig] = useState<ShopApiConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [geoNote, setGeoNote] = useState<string | null>(null);
   const [state, dispatch] = useReducer(
     buyReducer,
     initialBuyState("GH", "GHS"),
   );
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [waitStartedAt, setWaitStartedAt] = useState<number | null>(null);
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const quoteReq = useRef(0);
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollStarted = useRef<number | null>(null);
 
@@ -75,6 +80,7 @@ export function BuyWidget() {
       })
       .then((data) => {
         setConfig(data);
+        setGeoNote(data.detectedNote ?? null);
         const c =
           data.countries.find((x) => x.code === data.detectedCountry) ??
           data.countries.find((x) => x.code === data.defaultCountry)!;
@@ -99,9 +105,13 @@ export function BuyWidget() {
   const fetchQuote = useCallback(
     async (amount: string, currency: string) => {
       if (!amount || Number(amount) <= 0) {
+        quoteReq.current += 1;
+        setQuoteLoading(false);
         dispatch({ type: "SET_QUOTE", quote: null });
         return;
       }
+      const reqId = ++quoteReq.current;
+      setQuoteLoading(true);
       try {
         const res = await fetch("/api/quote", {
           method: "POST",
@@ -113,6 +123,7 @@ export function BuyWidget() {
           }),
         });
         const j = await res.json();
+        if (reqId !== quoteReq.current) return;
         if (!j.success) {
           dispatch({ type: "SET_QUOTE", quote: null });
           return;
@@ -131,7 +142,10 @@ export function BuyWidget() {
         dispatch({ type: "SET_QUOTE", quote: view });
         track("quote_viewed", { currency });
       } catch {
+        if (reqId !== quoteReq.current) return;
         dispatch({ type: "SET_QUOTE", quote: null });
+      } finally {
+        if (reqId === quoteReq.current) setQuoteLoading(false);
       }
     },
     [],
@@ -139,7 +153,12 @@ export function BuyWidget() {
 
   useEffect(() => {
     if (quoteTimer.current) clearTimeout(quoteTimer.current);
-    if (!state.amount) return;
+    if (!state.amount || Number(state.amount) <= 0) {
+      quoteReq.current += 1;
+      setQuoteLoading(false);
+      return;
+    }
+    setQuoteLoading(true);
     quoteTimer.current = setTimeout(() => {
       void fetchQuote(state.amount, state.currency);
     }, 400);
@@ -160,12 +179,19 @@ export function BuyWidget() {
     return () => clearTimeout(t);
   }, [state.quote, state.amount, state.currency, fetchQuote]);
 
+  const markWaitTimedOut = useCallback(() => {
+    dispatch({
+      type: "GOTO",
+      step: "still_processing",
+    });
+  }, []);
+
   const pollStatus = useCallback(() => {
     if (!state.ref || !state.wallet) return;
     if (!pollStarted.current) pollStarted.current = Date.now();
     const elapsed = Date.now() - pollStarted.current;
-    if (elapsed > 15 * 60_000) {
-      dispatch({ type: "GOTO", step: "still_processing" });
+    if (elapsed > WAIT_TOTAL_MS) {
+      markWaitTimedOut();
       return;
     }
     const interval = elapsed > 2 * 60_000 ? 10_000 : 4_000;
@@ -196,7 +222,7 @@ export function BuyWidget() {
           pollTimer.current = setTimeout(pollStatus, interval);
         }
       });
-  }, [state.ref, state.wallet, state.step]);
+  }, [state.ref, state.wallet, state.step, markWaitTimedOut]);
 
   useEffect(() => {
     if (
@@ -265,7 +291,9 @@ export function BuyWidget() {
       if (j.data.wallet) {
         dispatch({ type: "SET_WALLET", wallet: j.data.wallet });
       }
-      pollStarted.current = Date.now();
+      const started = Date.now();
+      pollStarted.current = started;
+      setWaitStartedAt(started);
     } catch {
       dispatch({
         type: "SUBMIT_ERR",
@@ -337,9 +365,9 @@ export function BuyWidget() {
 
   return (
     <div className="card p-5 sm:p-6 w-full max-w-[480px] mx-auto">
-      {config.detectedNote && state.step === "amount" && (
+      {geoNote && state.step === "amount" && (
         <p className="text-sm mb-3 text-[var(--mp-warning-text)] bg-[var(--mp-warning-bg)] rounded-2xl px-3 py-2">
-          {config.detectedNote}
+          {geoNote}
         </p>
       )}
 
@@ -348,6 +376,7 @@ export function BuyWidget() {
           currency={state.currency}
           amount={state.amount}
           quote={state.quote}
+          quoteLoading={quoteLoading}
           quickAmounts={activeCountry.quickAmounts ?? []}
           limits={activeCountry.buyLimits}
           showFee={config.fees.showFeeLine}
@@ -356,6 +385,7 @@ export function BuyWidget() {
           ticker={config.token.ticker}
           onAmount={(v) => dispatch({ type: "SET_AMOUNT", amount: v })}
           onCountry={(code, currency) => {
+            setGeoNote(null);
             dispatch({ type: "SET_COUNTRY", country: code, currency });
             track("country_changed", { code });
           }}
@@ -368,7 +398,6 @@ export function BuyWidget() {
           methods={activeCountry.methods}
           methodId={state.methodId}
           phone={state.phone}
-          networkProvider={state.networkProvider}
           customerName={state.customerName}
           showNameField={state.showNameField}
           error={state.error}
@@ -385,7 +414,6 @@ export function BuyWidget() {
           onPhone={(phone, hint) =>
             dispatch({ type: "SET_PHONE", phone, networkHint: hint })
           }
-          onNetwork={(n) => dispatch({ type: "SET_NETWORK", networkProvider: n })}
           onName={(n) => dispatch({ type: "SET_NAME", customerName: n })}
           onBack={() => dispatch({ type: "GOTO", step: "amount" })}
           onNext={() => dispatch({ type: "GOTO", step: "wallet" })}
@@ -412,6 +440,7 @@ export function BuyWidget() {
           chainId={config.token.chainId}
           accepted={state.acceptedRisk}
           submitting={false}
+          showFee={config.fees.showFeeLine}
           onAccept={(v) => dispatch({ type: "SET_RISK", accepted: v })}
           onBack={() => dispatch({ type: "GOTO", step: "wallet" })}
           onConfirm={() => void submitOrder()}
@@ -424,11 +453,13 @@ export function BuyWidget() {
         </div>
       )}
 
-      {state.step === "awaiting_prompt" && (
+      {state.step === "awaiting_prompt" && waitStartedAt != null && (
         <AwaitingStep
           phone={state.phone}
           network={state.networkProvider}
           orderRef={state.ref}
+          waitStartedAt={waitStartedAt}
+          onWaitTimeout={markWaitTimedOut}
         />
       )}
 
@@ -453,11 +484,18 @@ export function BuyWidget() {
           orderRef={state.ref}
           txHash={state.txHash}
           explorerUrl={state.explorerUrl}
-          error={state.error}
+          error={
+            state.step === "still_processing"
+              ? state.error ??
+                "This is taking longer than usual. Keep your reference handy."
+              : state.error
+          }
           retryAfterSec={state.retryAfterSec}
           ticker={config.token.ticker}
           contract={config.token.contract}
           deskUrl={config.telegram.deskUrl}
+          waitStartedAt={waitStartedAt}
+          onWaitTimeout={markWaitTimedOut}
           onRetry={() => dispatch({ type: "GOTO", step: "amount" })}
         />
       )}
