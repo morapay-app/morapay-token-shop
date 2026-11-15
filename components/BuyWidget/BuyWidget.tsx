@@ -12,6 +12,7 @@ import { BankDepositStep } from "./BankDepositStep";
 import { StatusStep } from "./StatusStep";
 import { TelegramFallback } from "@/components/TelegramFallback";
 import { track } from "@/lib/analytics";
+import { WAIT_TOTAL_MS } from "@/lib/wait-phases";
 
 type ShopApiConfig = {
   token: {
@@ -62,6 +63,7 @@ export function BuyWidget() {
     initialBuyState("GH", "GHS"),
   );
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [waitStartedAt, setWaitStartedAt] = useState<number | null>(null);
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quoteReq = useRef(0);
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -177,12 +179,19 @@ export function BuyWidget() {
     return () => clearTimeout(t);
   }, [state.quote, state.amount, state.currency, fetchQuote]);
 
+  const markWaitTimedOut = useCallback(() => {
+    dispatch({
+      type: "GOTO",
+      step: "still_processing",
+    });
+  }, []);
+
   const pollStatus = useCallback(() => {
     if (!state.ref || !state.wallet) return;
     if (!pollStarted.current) pollStarted.current = Date.now();
     const elapsed = Date.now() - pollStarted.current;
-    if (elapsed > 15 * 60_000) {
-      dispatch({ type: "GOTO", step: "still_processing" });
+    if (elapsed > WAIT_TOTAL_MS) {
+      markWaitTimedOut();
       return;
     }
     const interval = elapsed > 2 * 60_000 ? 10_000 : 4_000;
@@ -213,7 +222,7 @@ export function BuyWidget() {
           pollTimer.current = setTimeout(pollStatus, interval);
         }
       });
-  }, [state.ref, state.wallet, state.step]);
+  }, [state.ref, state.wallet, state.step, markWaitTimedOut]);
 
   useEffect(() => {
     if (
@@ -282,7 +291,9 @@ export function BuyWidget() {
       if (j.data.wallet) {
         dispatch({ type: "SET_WALLET", wallet: j.data.wallet });
       }
-      pollStarted.current = Date.now();
+      const started = Date.now();
+      pollStarted.current = started;
+      setWaitStartedAt(started);
     } catch {
       dispatch({
         type: "SUBMIT_ERR",
@@ -442,11 +453,13 @@ export function BuyWidget() {
         </div>
       )}
 
-      {state.step === "awaiting_prompt" && (
+      {state.step === "awaiting_prompt" && waitStartedAt != null && (
         <AwaitingStep
           phone={state.phone}
           network={state.networkProvider}
           orderRef={state.ref}
+          waitStartedAt={waitStartedAt}
+          onWaitTimeout={markWaitTimedOut}
         />
       )}
 
@@ -471,11 +484,18 @@ export function BuyWidget() {
           orderRef={state.ref}
           txHash={state.txHash}
           explorerUrl={state.explorerUrl}
-          error={state.error}
+          error={
+            state.step === "still_processing"
+              ? state.error ??
+                "This is taking longer than usual. Keep your reference handy."
+              : state.error
+          }
           retryAfterSec={state.retryAfterSec}
           ticker={config.token.ticker}
           contract={config.token.contract}
           deskUrl={config.telegram.deskUrl}
+          waitStartedAt={waitStartedAt}
+          onWaitTimeout={markWaitTimedOut}
           onRetry={() => dispatch({ type: "GOTO", step: "amount" })}
         />
       )}

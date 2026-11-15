@@ -1,6 +1,7 @@
 "use client";
 
 import type { BuyStep } from "./machine";
+import { WaitCountdown } from "./WaitCountdown";
 
 type Props = {
   step: BuyStep;
@@ -12,16 +13,26 @@ type Props = {
   ticker: string;
   contract: string;
   deskUrl: string;
+  waitStartedAt?: number | null;
+  onWaitTimeout?: () => void;
   onRetry: () => void;
 };
 
 export function StatusStep(props: Props) {
   if (props.step === "delivering") {
     return (
-      <div className="space-y-3 text-center py-6">
-        <h2 className="font-heading text-xl font-bold">
-          Payment received, delivering tokens…
-        </h2>
+      <div className="space-y-4 text-center py-6">
+        {props.waitStartedAt != null ? (
+          <WaitCountdown
+            startedAt={props.waitStartedAt}
+            mode="delivering"
+            onTimeout={props.onWaitTimeout}
+          />
+        ) : (
+          <h2 className="font-heading text-xl font-bold">
+            Payment received, delivering tokens…
+          </h2>
+        )}
         <ol className="text-left text-sm space-y-2 max-w-xs mx-auto">
           <li>✓ Payment received</li>
           <li>→ Buying tokens</li>
@@ -82,7 +93,7 @@ export function StatusStep(props: Props) {
         <h2 className="font-heading text-xl font-bold">Still processing</h2>
         <p className="text-sm text-[var(--mp-text-muted)]">
           {props.error ??
-            "This is taking longer than usual. Keep your reference handy."}
+            "This is taking longer than 11 minutes. Keep your reference handy — support can help finish delivery."}
         </p>
         {props.orderRef && (
           <p className="font-mono text-sm">{props.orderRef}</p>
