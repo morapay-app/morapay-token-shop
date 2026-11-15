@@ -1,21 +1,36 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Instrument_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { shopConfig } from "@/shop.config";
 import { accentForLightText } from "@/lib/contrast";
 import "./globals.css";
 
-const manrope = Manrope({
-  subsets: ["latin"],
+// Self-hosted: next/font/google intermittently crashes CI when Google
+// returns extensionless /l/font?kit= URLs (vercel/next.js#99114).
+const manrope = localFont({
+  src: [
+    { path: "./fonts/manrope-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/manrope-latin-700-normal.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/manrope-latin-800-normal.woff2", weight: "800", style: "normal" },
+  ],
   variable: "--font-manrope",
   display: "swap",
-  weight: ["600", "700", "800"],
 });
 
-const instrument = Instrument_Sans({
-  subsets: ["latin"],
+const instrument = localFont({
+  src: [
+    {
+      path: "./fonts/instrument-sans-latin-400-normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/instrument-sans-latin-500-normal.woff2",
+      weight: "500",
+      style: "normal",
+    },
+  ],
   variable: "--font-instrument",
   display: "swap",
-  weight: ["400", "500"],
 });
 
 const siteUrl =
