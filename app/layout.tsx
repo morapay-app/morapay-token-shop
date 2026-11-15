@@ -1,0 +1,110 @@
+import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
+import { shopConfig } from "@/shop.config";
+import { accentForLightText } from "@/lib/contrast";
+import "./globals.css";
+
+// Self-hosted: next/font/google intermittently crashes CI when Google
+// returns extensionless /l/font?kit= URLs (vercel/next.js#99114).
+const manrope = localFont({
+  src: [
+    { path: "./fonts/manrope-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/manrope-latin-700-normal.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/manrope-latin-800-normal.woff2", weight: "800", style: "normal" },
+  ],
+  variable: "--font-manrope",
+  display: "swap",
+});
+
+const instrument = localFont({
+  src: [
+    {
+      path: "./fonts/instrument-sans-latin-400-normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/instrument-sans-latin-500-normal.woff2",
+      weight: "500",
+      style: "normal",
+    },
+  ],
+  variable: "--font-instrument",
+  display: "swap",
+});
+
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || shopConfig.siteUrl;
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: `Buy $${shopConfig.token.ticker} with Mobile Money or Bank | ${shopConfig.token.name}`,
+  description: shopConfig.token.description,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: `Buy $${shopConfig.token.ticker} with mobile money or bank`,
+    description: shopConfig.token.description,
+    url: siteUrl,
+    siteName: shopConfig.token.name,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `Buy $${shopConfig.token.ticker}`,
+    description: shopConfig.token.description,
+  },
+  icons: {
+    icon: "/brand/favicon.ico",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  const accent = shopConfig.brand.accent;
+  const accentText = shopConfig.brand.accentText ?? "#FFFFFF";
+  const heroBg = shopConfig.brand.heroBg ?? "#FFFFFF";
+  const accentOnLight = accentForLightText(accent, "#EFEEE2");
+  const buttonBg = shopConfig.brand.overridePrimary
+    ? accent
+    : "var(--mp-button-bg)";
+
+  return (
+    <html lang="en">
+      <body
+        className={`${manrope.variable} ${instrument.variable} antialiased`}
+        style={
+          {
+            "--brand-accent": accent,
+            "--brand-accent-on-light": accentOnLight,
+            "--brand-accent-text": accentText,
+            "--brand-hero-bg": heroBg,
+            ...(shopConfig.brand.overridePrimary
+              ? { "--mp-button-bg": buttonBg, "--mp-button-text": accentText }
+              : {}),
+          } as React.CSSProperties
+        }
+      >
+        {children}
+        {shopConfig.analytics.plausibleDomain ||
+        process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ? (
+          <script
+            defer
+            data-domain={
+              process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ||
+              shopConfig.analytics.plausibleDomain
+            }
+            src="https://plausible.io/js/script.js"
+          />
+        ) : null}
+      </body>
+    </html>
+  );
+}
