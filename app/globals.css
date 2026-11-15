@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+:root {
+  /* Morapay base tokens (section 7) */
+  --mp-canvas: #efeee2;
+  --mp-hero: #ffffff;
+  --mp-card: #f8f6ec;
+  --mp-subcard: #edebdf;
+  --mp-divider: #dad6c6;
+  --mp-text: #2b0a30;
+  /* Darkened from Morapay #8A8578 for WCAG AA on canvas #EFEEE2 */
+  --mp-text-muted: #5c574c;
+  --mp-text-on-dark: #f8f6ec;
+  --mp-pill-active: #38d690;
+  --mp-pill-inactive: #dff6ea;
+  --mp-pill-inactive-text: #0f5c3e;
+  --mp-button-bg: #4cdb9c;
+  --mp-button-text: #2b0a30;
+  --mp-success-bg: #2e0a33;
+  --mp-success-green: #1fae5c;
+  --mp-warning-bg: #f7d9d3;
+  --mp-warning-text: #8a2e1e;
+
+  --receipt-bg: #02191a;
+  --receipt-surface: #023436;
+  --receipt-text: #eafbf3;
+  --receipt-muted: #6fa89a;
+  --receipt-accent: #4cdb9c;
+
+  /* Per-shop (overridden in layout style) */
+  --brand-accent: #d91c7f;
+  --brand-accent-on-light: #a0145c;
+  --brand-accent-text: #ffffff;
+  --brand-hero-bg: #ffffff;
+
+  --radius-hero: 40px;
+  --radius-card: 32px;
+  --radius-subcard: 24px;
+  --radius-pill: 9999px;
+
+  --background: var(--mp-canvas);
+  --foreground: var(--mp-text);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-instrument);
+  --font-heading: var(--font-manrope);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--mp-canvas);
+  color: var(--mp-text);
+  font-family: var(--font-instrument), system-ui, sans-serif;
+  margin: 0;
+  min-height: 100dvh;
+}
+
+.font-heading {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+}
+
+.font-numbers {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 800;
+}
+
+.card {
+  background: var(--mp-card);
+  border-radius: var(--radius-card);
+}
+
+.subcard {
+  background: var(--mp-subcard);
+  border-radius: var(--radius-subcard);
+}
+
+.pill {
+  border-radius: var(--radius-pill);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--mp-button-bg);
+  color: var(--mp-button-text);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--mp-text);
+  border: 1px solid var(--mp-divider);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.field {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-subcard);
+  border: 1px solid var(--mp-divider);
+  background: var(--mp-hero);
+  color: var(--mp-text);
+  outline: none;
+}
+
+.field:focus {
+  border-color: var(--mp-pill-active);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mp-pill-active) 25%, transparent);
+}
+
+.label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+
+.hero-band {
+  background: var(--brand-hero-bg, var(--mp-hero));
+  border-radius: var(--radius-hero);
+}
+
+.receipt-card {
+  background: var(--receipt-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
