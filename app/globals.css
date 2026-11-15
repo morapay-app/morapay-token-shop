@@ -151,6 +151,26 @@ body {
   border-radius: var(--radius-hero);
 }
 
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--mp-divider) 0%,
+    color-mix(in srgb, var(--mp-card) 70%, white) 50%,
+    var(--mp-divider) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .receipt-card {
   background: var(--receipt-bg);
 }

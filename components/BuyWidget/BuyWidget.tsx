@@ -60,7 +60,9 @@ export function BuyWidget() {
     buyReducer,
     initialBuyState("GH", "GHS"),
   );
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const quoteReq = useRef(0);
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollStarted = useRef<number | null>(null);
 
@@ -99,9 +101,13 @@ export function BuyWidget() {
   const fetchQuote = useCallback(
     async (amount: string, currency: string) => {
       if (!amount || Number(amount) <= 0) {
+        quoteReq.current += 1;
+        setQuoteLoading(false);
         dispatch({ type: "SET_QUOTE", quote: null });
         return;
       }
+      const reqId = ++quoteReq.current;
+      setQuoteLoading(true);
       try {
         const res = await fetch("/api/quote", {
           method: "POST",
@@ -113,6 +119,7 @@ export function BuyWidget() {
           }),
         });
         const j = await res.json();
+        if (reqId !== quoteReq.current) return;
         if (!j.success) {
           dispatch({ type: "SET_QUOTE", quote: null });
           return;
@@ -131,7 +138,10 @@ export function BuyWidget() {
         dispatch({ type: "SET_QUOTE", quote: view });
         track("quote_viewed", { currency });
       } catch {
+        if (reqId !== quoteReq.current) return;
         dispatch({ type: "SET_QUOTE", quote: null });
+      } finally {
+        if (reqId === quoteReq.current) setQuoteLoading(false);
       }
     },
     [],
@@ -139,7 +149,12 @@ export function BuyWidget() {
 
   useEffect(() => {
     if (quoteTimer.current) clearTimeout(quoteTimer.current);
-    if (!state.amount) return;
+    if (!state.amount || Number(state.amount) <= 0) {
+      quoteReq.current += 1;
+      setQuoteLoading(false);
+      return;
+    }
+    setQuoteLoading(true);
     quoteTimer.current = setTimeout(() => {
       void fetchQuote(state.amount, state.currency);
     }, 400);
@@ -348,6 +363,7 @@ export function BuyWidget() {
           currency={state.currency}
           amount={state.amount}
           quote={state.quote}
+          quoteLoading={quoteLoading}
           quickAmounts={activeCountry.quickAmounts ?? []}
           limits={activeCountry.buyLimits}
           showFee={config.fees.showFeeLine}

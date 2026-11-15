@@ -6,12 +6,15 @@ import { TokenInfo } from "@/components/TokenInfo";
 import { Faq } from "@/components/Faq";
 import { BuyWidget } from "@/components/BuyWidget/BuyWidget";
 import { shopConfig } from "@/shop.config";
+import { textOnHero } from "@/lib/contrast";
 
 export default function HomePage() {
   const headline = shopConfig.brand.headline.replace(
     "${ticker}",
     `$${shopConfig.token.ticker}`,
   );
+  const heroBg = shopConfig.brand.heroBg ?? "#FFFFFF";
+  const heroText = textOnHero(heroBg);
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -46,10 +49,10 @@ export default function HomePage() {
     <main>
       <Header />
       <section className="w-full max-w-[480px] mx-auto px-4 pt-4 pb-6">
-        <div className="hero-band p-6 mb-5 text-[var(--brand-accent-text)]">
+        <div className="hero-band p-6 mb-5" style={{ color: heroText }}>
           <p
-            className="inline-block text-xs font-medium px-3 py-1 rounded-full mb-3"
-            style={{ background: "color-mix(in srgb, var(--brand-accent) 85%, black)" }}
+            className="inline-block text-xs font-medium px-3 py-1 rounded-full mb-3 text-[var(--brand-accent-text)]"
+            style={{ background: "var(--brand-accent)" }}
           >
             ${shopConfig.token.ticker}
           </p>
@@ -57,7 +60,14 @@ export default function HomePage() {
             {headline}
           </h1>
           {shopConfig.brand.subline && (
-            <p className="text-sm" style={{ color: "color-mix(in srgb, var(--brand-accent-text) 88%, transparent)" }}>{shopConfig.brand.subline}</p>
+            <p
+              className="text-sm"
+              style={{
+                color: `color-mix(in srgb, ${heroText} 82%, transparent)`,
+              }}
+            >
+              {shopConfig.brand.subline}
+            </p>
           )}
         </div>
         <BuyWidget />
