@@ -1,11 +1,16 @@
 import { ImageResponse } from "next/og";
 import { shopConfig } from "@/shop.config";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default function OgImage() {
+  const ticker = `$${shopConfig.token.ticker}`;
+  const accent = shopConfig.brand.accent;
+  const stageBg = shopConfig.culture?.stageBg ?? "#0A0A0A";
+  const stageText = shopConfig.culture?.stageText ?? "#F5F1E6";
+
   return new ImageResponse(
     (
       <div
@@ -16,8 +21,8 @@ export default function OgImage() {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: 64,
-          background: "#EFEEE2",
-          color: "#2B0A30",
+          background: stageBg,
+          color: stageText,
           fontFamily: "sans-serif",
         }}
       >
@@ -25,23 +30,49 @@ export default function OgImage() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 16,
-            color: shopConfig.brand.accent,
+            color: accent,
             fontSize: 28,
             fontWeight: 700,
           }}
         >
-          ${shopConfig.token.ticker}
+          {ticker}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.1 }}>
-            Buy ${shopConfig.token.ticker}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontSize: 64,
+              fontWeight: 800,
+              lineHeight: 1.1,
+            }}
+          >
+            {`Buy ${ticker}`}
           </div>
-          <div style={{ fontSize: 28, color: "#8A8578" }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 28,
+              color: "rgba(245,241,230,0.65)",
+            }}
+          >
             with mobile money or bank
           </div>
         </div>
-        <div style={{ fontSize: 22, color: "#0F5C3E" }}>Powered by Morapay</div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 22,
+            color: accent,
+          }}
+        >
+          Powered by Morapay
+        </div>
       </div>
     ),
     { ...size },
