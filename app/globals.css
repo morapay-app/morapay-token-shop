@@ -281,6 +281,21 @@ body {
   z-index: 1;
 }
 
+/*
+ * Buy / fallback cards are cream Morapay UI sitting on the dark culture stage.
+ * Reset inherited stage cream text so Amount, quote, labels stay plum-on-cream.
+ */
+.culture-stage .card,
+.culture-stage .card .label,
+.culture-stage .card .font-heading,
+.culture-stage .card .font-numbers {
+  color: var(--mp-text);
+}
+
+.culture-stage .card .btn-ghost {
+  color: var(--mp-text);
+}
+
 .culture-brand {
   text-align: center;
   margin-bottom: 0.75rem;
@@ -358,6 +373,37 @@ body {
   margin: 0 auto 1rem;
   max-width: 280px;
   animation: culture-float 5.5s ease-in-out infinite;
+}
+
+@media (max-width: 1023px) {
+  .culture-visual {
+    display: none;
+  }
+
+  .culture-marquee {
+    margin-bottom: 0.75rem;
+  }
+
+  .culture-roar {
+    font-size: clamp(1.25rem, 6.5vw, 1.7rem);
+    margin-bottom: 0.5rem;
+  }
+
+  .culture-brand {
+    margin-bottom: 0.35rem;
+  }
+
+  .culture-buy-kicker {
+    margin-bottom: 0.2rem;
+  }
+
+  .culture-buy-sub {
+    margin-bottom: 0.75rem;
+  }
+
+  .culture-home-link {
+    display: none;
+  }
 }
 
 .culture-visual img {
