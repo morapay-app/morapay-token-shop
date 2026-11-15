@@ -284,16 +284,18 @@ body {
 /*
  * Buy / fallback cards are cream Morapay UI sitting on the dark culture stage.
  * Reset inherited stage cream text so Amount, quote, labels stay plum-on-cream.
+ * Do not target .font-heading — that overrides receipt "Tokens sent" to plum on black.
  */
-.culture-stage .card,
-.culture-stage .card .label,
-.culture-stage .card .font-heading,
-.culture-stage .card .font-numbers {
+.culture-stage .card {
   color: var(--mp-text);
 }
 
 .culture-stage .card .btn-ghost {
   color: var(--mp-text);
+}
+
+.culture-stage .card .receipt-card {
+  color: var(--receipt-text);
 }
 
 .culture-brand {
