@@ -20,14 +20,14 @@ test.describe("token shop smoke", () => {
   test("country=NG path loads", async ({ page }) => {
     await page.goto("/?country=NG");
     await expect(
-      page.getByRole("heading", { name: /MILAN|Amount|Telegram/i }).first(),
+      page.getByRole("heading", { name: /AMEM|Amount|Telegram/i }).first(),
     ).toBeVisible();
   });
 
   test("axe has no serious/critical issues on home", async ({ page }) => {
     await page.goto("/");
     await page
-      .getByRole("heading", { name: /Buy \$MILAN|Amount|Telegram/i })
+      .getByRole("heading", { name: /Buy \$AMEM|Amount|Telegram/i })
       .first()
       .waitFor();
     const results = await new AxeBuilder({ page })

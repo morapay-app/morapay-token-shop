@@ -1,11 +1,11 @@
 /**
  * THE ONLY FILE A NEW SHOP EDITS (plus /public/brand/* and env vars).
- * Default example: MILAN from section 13.
+ * Live shop: AMEM (The African Meme).
  */
-import milanConfig from "./examples/milan.config";
+import amemConfig from "./examples/amem.config";
 import { ShopConfigSchema, type ShopConfig } from "./config/schema";
 
-const parsed = ShopConfigSchema.safeParse(milanConfig);
+const parsed = ShopConfigSchema.safeParse(amemConfig);
 
 if (!parsed.success) {
   console.error(parsed.error.flatten());
