@@ -13,6 +13,7 @@ type Props = {
   chainId: number;
   accepted: boolean;
   submitting: boolean;
+  showFee?: boolean;
   onAccept: (v: boolean) => void;
   onBack: () => void;
   onConfirm: () => void;
@@ -52,7 +53,7 @@ export function ReviewStep(props: Props) {
             <dd>{props.quote.exchangeRate}</dd>
           </div>
         )}
-        {props.quote.totalFee != null && (
+        {props.showFee && props.quote.totalFee != null && (
           <div className="flex justify-between gap-2">
             <dt className="text-[var(--mp-text-muted)]">Fee</dt>
             <dd>{String(props.quote.totalFee)}</dd>

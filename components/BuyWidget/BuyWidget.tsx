@@ -56,6 +56,7 @@ function persistOrder(ref: string, wallet: string) {
 export function BuyWidget() {
   const [config, setConfig] = useState<ShopApiConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [geoNote, setGeoNote] = useState<string | null>(null);
   const [state, dispatch] = useReducer(
     buyReducer,
     initialBuyState("GH", "GHS"),
@@ -77,6 +78,7 @@ export function BuyWidget() {
       })
       .then((data) => {
         setConfig(data);
+        setGeoNote(data.detectedNote ?? null);
         const c =
           data.countries.find((x) => x.code === data.detectedCountry) ??
           data.countries.find((x) => x.code === data.defaultCountry)!;
@@ -352,9 +354,9 @@ export function BuyWidget() {
 
   return (
     <div className="card p-5 sm:p-6 w-full max-w-[480px] mx-auto">
-      {config.detectedNote && state.step === "amount" && (
+      {geoNote && state.step === "amount" && (
         <p className="text-sm mb-3 text-[var(--mp-warning-text)] bg-[var(--mp-warning-bg)] rounded-2xl px-3 py-2">
-          {config.detectedNote}
+          {geoNote}
         </p>
       )}
 
@@ -372,6 +374,7 @@ export function BuyWidget() {
           ticker={config.token.ticker}
           onAmount={(v) => dispatch({ type: "SET_AMOUNT", amount: v })}
           onCountry={(code, currency) => {
+            setGeoNote(null);
             dispatch({ type: "SET_COUNTRY", country: code, currency });
             track("country_changed", { code });
           }}
@@ -384,7 +387,6 @@ export function BuyWidget() {
           methods={activeCountry.methods}
           methodId={state.methodId}
           phone={state.phone}
-          networkProvider={state.networkProvider}
           customerName={state.customerName}
           showNameField={state.showNameField}
           error={state.error}
@@ -401,7 +403,6 @@ export function BuyWidget() {
           onPhone={(phone, hint) =>
             dispatch({ type: "SET_PHONE", phone, networkHint: hint })
           }
-          onNetwork={(n) => dispatch({ type: "SET_NETWORK", networkProvider: n })}
           onName={(n) => dispatch({ type: "SET_NAME", customerName: n })}
           onBack={() => dispatch({ type: "GOTO", step: "amount" })}
           onNext={() => dispatch({ type: "GOTO", step: "wallet" })}
@@ -428,6 +429,7 @@ export function BuyWidget() {
           chainId={config.token.chainId}
           accepted={state.acceptedRisk}
           submitting={false}
+          showFee={config.fees.showFeeLine}
           onAccept={(v) => dispatch({ type: "SET_RISK", accepted: v })}
           onBack={() => dispatch({ type: "GOTO", step: "wallet" })}
           onConfirm={() => void submitOrder()}

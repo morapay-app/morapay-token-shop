@@ -153,7 +153,7 @@ const amemConfig = {
     ],
   },
   sell: { enabled: false },
-  fees: { showFeeLine: true },
+  fees: { showFeeLine: false },
   telegram: {
     // TODO(owner): replace with real Morapay desk link
     deskUrl: "https://t.me/morapay",
