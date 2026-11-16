@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { morapayFetch } from "./client";
+import { merchantSigningEnabled } from "./merchant-config";
 
 export const OnrampTargetSchema = z.object({
   chainId: z.number(),
@@ -98,58 +99,186 @@ export const LimitsSchema = z.object({
   corridor: z.unknown().optional(),
 });
 
-export async function getRampConfig(): Promise<RampConfig> {
-  const data = await morapayFetch<unknown>("/api/public/ramp/config");
-  return RampConfigSchema.parse(data);
+const MERCHANT_RAMP = "/api/v1/merchant/ramp";
+
+export type MorapayCallContext = {
+  buyerIp?: string;
+};
+
+function merchantEnvUpper(): "TEST" | "LIVE" {
+  const env = (process.env.MORAPAY_ENV ?? "test").toLowerCase();
+  return env === "live" ? "LIVE" : "TEST";
+}
+
+function normalizeRampConfig(data: unknown): RampConfig {
+  const raw = data as Record<string, unknown>;
+  if (raw.supportedOnrampTargets) return RampConfigSchema.parse(data);
+  return RampConfigSchema.parse({
+    supportedCurrencies:
+      (raw.supportedCurrencies as string[]) ??
+      (raw.corridors as { currency: string }[])?.map((c) => c.currency) ??
+      [],
+    fiatCorridors: raw.fiatCorridors ?? raw.corridors ?? [],
+    supportedOnrampTargets: raw.supportedOnrampTargets ?? raw.onrampTargets ?? [],
+    supportedOfframpSources: raw.supportedOfframpSources ?? [],
+    limits: raw.limits,
+  });
+}
+
+export type RampTransaction = Record<string, unknown> & {
+  merchantReference?: unknown;
+  merchant_reference?: unknown;
+  status?: unknown;
+  bankDeposit?: unknown;
+  bank_deposit?: unknown;
+  payment?: unknown;
+  paymentInstructions?: unknown;
+  depositAddress?: unknown;
+  deposit_address?: unknown;
+  deposit?: unknown;
+  destinationWallet?: unknown;
+};
+
+function normalizeTransaction(tx: Record<string, unknown>): RampTransaction {
+  const reference = tx.reference ?? tx.merchantReference ?? tx.merchant_reference;
+  return {
+    ...tx,
+    merchantReference: reference,
+    merchant_reference: reference,
+    status: tx.status ?? tx.state,
+    fromAmount: tx.fromAmount ?? tx.fiatAmount ?? tx.amount,
+    fiatAmount: tx.fiatAmount ?? tx.amount,
+    fiatCurrency: tx.fiatCurrency ?? tx.currency,
+    wallet_address: tx.wallet_address ?? tx.destinationWallet,
+  };
+}
+
+export async function getRampConfig(ctx: MorapayCallContext = {}): Promise<RampConfig> {
+  const data = await morapayFetch<unknown>(`${MERCHANT_RAMP}/config`, {
+    buyerIp: ctx.buyerIp,
+  });
+  return normalizeRampConfig(data);
 }
 
 export async function getLimits(
   currency: string,
   clientChannel = "browser",
+  ctx: MorapayCallContext = {},
 ): Promise<z.infer<typeof LimitsSchema>> {
-  const data = await morapayFetch<unknown>("/api/public/ramp/limits", {
-    searchParams: { currency: currency.toLowerCase(), client_channel: clientChannel },
+  const data = await morapayFetch<unknown>(`${MERCHANT_RAMP}/limits`, {
+    searchParams: {
+      currency: currency.toLowerCase(),
+      client_channel: clientChannel,
+    },
+    buyerIp: ctx.buyerIp,
   });
   return LimitsSchema.parse(data);
 }
 
-export async function getBanks(currency: string) {
-  const cur = currency.toLowerCase();
-  const path =
-    cur === "ngn"
-      ? "/api/public/fiat/banks"
-      : "/api/public/ramp/banks";
-  const data = await morapayFetch<unknown>(path, {
-    searchParams: { currency: cur },
+export async function getBanks(currency: string, ctx: MorapayCallContext = {}) {
+  const data = await morapayFetch<unknown>(`${MERCHANT_RAMP}/banks`, {
+    searchParams: { currency: currency.toLowerCase() },
+    buyerIp: ctx.buyerIp,
   });
   return BanksResponseSchema.parse(data);
 }
 
-/**
- * Quote adapter — chain MUST be a string (verified live).
- */
-export async function getQuote(input: {
-  action: "ONRAMP" | "OFFRAMP";
-  inputAmount: string;
-  inputCurrency: string;
-  outputCurrency: string;
-  chain: string | number;
-}): Promise<Quote> {
-  const body = {
-    action: input.action,
-    inputAmount: String(input.inputAmount),
-    inputCurrency: input.inputCurrency.toUpperCase(),
-    outputCurrency: input.outputCurrency.toUpperCase(),
-    chain: String(input.chain),
+function mapCheckoutQuoteRow(
+  row: Record<string, unknown>,
+  input: { amount: string; currency: string; chain: string; ticker: string },
+): Quote {
+  const payout = String(row.payoutAmount ?? row.amount ?? row.targetAmount ?? "0");
+  return {
+    quoteId: String(row.quoteId ?? row.id ?? `checkout_${Date.now()}`),
+    expiresAt: String(
+      row.expiresAt ?? new Date(Date.now() + 5 * 60_000).toISOString(),
+    ),
+    input: { amount: input.amount, currency: input.currency.toUpperCase() },
+    output: {
+      amount: payout,
+      currency: String(row.tokenSymbol ?? input.ticker).toUpperCase(),
+      chain: String(row.chainId ?? input.chain),
+    },
+    fees: row.fees as Quote["fees"],
   };
-  const data = await morapayFetch<unknown>("/api/public/quotes", {
-    method: "POST",
-    body,
-  });
-  return QuoteSchema.parse(data);
 }
 
-/** Build quote body for tests — ensures chain is string. */
+/**
+ * Token-shop quote: signed POST /api/v1/quotes/checkout (Morapay quotes API).
+ * Fiat-only merchant ramp quote does not return per-token payout rows.
+ */
+export async function getQuote(
+  input: {
+    action: "ONRAMP" | "OFFRAMP";
+    inputAmount: string;
+    inputCurrency: string;
+    outputCurrency: string;
+    chain: string | number;
+  },
+  ctx: MorapayCallContext = {},
+): Promise<Quote> {
+  if (input.action === "ONRAMP") {
+    const body = {
+      inputAmount: String(input.inputAmount),
+      inputCurrency: input.inputCurrency.toUpperCase(),
+      targetTokenSymbol: input.outputCurrency.toUpperCase(),
+      targetChainId: String(input.chain),
+      environment: merchantEnvUpper(),
+    };
+    const data = await morapayFetch<Record<string, unknown>>(
+      "/api/v1/quotes/checkout",
+      { method: "POST", body, buyerIp: ctx.buyerIp },
+    );
+    const rows = (data.rows as Record<string, unknown>[]) ?? [];
+    const match =
+      rows.find(
+        (r) =>
+          String(r.tokenSymbol ?? "").toUpperCase() ===
+            input.outputCurrency.toUpperCase() &&
+          String(r.chainId ?? "") === String(input.chain),
+      ) ?? rows[0];
+    if (!match) {
+      throw new Error("No checkout quote row for this token and chain.");
+    }
+    return QuoteSchema.parse(
+      mapCheckoutQuoteRow(match, {
+        amount: String(input.inputAmount),
+        currency: input.inputCurrency,
+        chain: String(input.chain),
+        ticker: input.outputCurrency,
+      }),
+    );
+  }
+
+  const body = {
+    direction: "offramp",
+    currency: input.outputCurrency.toLowerCase(),
+    amount: String(input.inputAmount),
+    targetTokenSymbol: input.inputCurrency.toUpperCase(),
+    targetChainId: String(input.chain),
+  };
+  const data = await morapayFetch<Record<string, unknown>>(
+    `${MERCHANT_RAMP}/quote`,
+    { method: "POST", body, buyerIp: ctx.buyerIp },
+  );
+  return QuoteSchema.parse({
+    quoteId: String(data.quoteId ?? data.id ?? "offramp_quote"),
+    expiresAt: String(
+      data.expiresAt ?? new Date(Date.now() + 5 * 60_000).toISOString(),
+    ),
+    input: {
+      amount: String(input.inputAmount),
+      currency: input.inputCurrency.toUpperCase(),
+    },
+    output: {
+      amount: String(data.customerAmount ?? data.quotedAmount ?? data.amount ?? "0"),
+      currency: input.outputCurrency.toUpperCase(),
+      chain: String(input.chain),
+    },
+    feeCapture: data.merchantFee,
+  });
+}
+
 export function buildQuoteBody(input: {
   action: "ONRAMP" | "OFFRAMP";
   inputAmount: string;
@@ -172,6 +301,7 @@ export type InitiateOnrampBody = {
   payout_wallet_address: string;
   wallet_address: string;
   customer_name?: string;
+  customer_email?: string;
   client_channel: "browser";
   target_chain_id: string;
   target_token_symbol: string;
@@ -181,13 +311,56 @@ export type InitiateOnrampBody = {
   network_provider?: string;
   referral_code?: string;
   turnstileToken?: string;
+  payment_method?: "mobile_money" | "bank_transfer" | "bank" | "card";
 };
 
-export async function initiateOnramp(body: InitiateOnrampBody) {
-  return morapayFetch<Record<string, unknown>>(
-    "/api/public/ramp/onramp/initiate",
-    { method: "POST", body, timeoutMs: 60_000 },
+export async function initiateOnramp(
+  body: InitiateOnrampBody,
+  ctx: MorapayCallContext = {},
+) {
+  const paymentMethod =
+    body.payment_method === "bank_transfer" || body.payment_method === "bank"
+      ? "bank"
+      : body.payment_method === "card"
+        ? "card"
+        : "mobile_money";
+
+  const payload: Record<string, unknown> = {
+    currency: body.currency.toLowerCase(),
+    amount: body.fiat_amount,
+    destinationWallet: body.payout_wallet_address,
+    walletAddress: body.wallet_address,
+    paymentMethod,
+    phoneNumber: body.phone_number,
+    networkProvider: body.network_provider,
+    customerName: body.customer_name,
+    customerEmail: body.customer_email,
+    clientChannel: body.client_channel,
+    targetChainId: body.target_chain_id,
+    targetTokenSymbol: body.target_token_symbol,
+    targetTokenAddress: body.target_token_address,
+    quotedToAmount: body.quoted_to_amount,
+    referralCode: body.referral_code,
+    turnstileToken: body.turnstileToken,
+    shopId: process.env.SHOP_ID,
+    clientIp: ctx.buyerIp,
+  };
+
+  const data = await morapayFetch<Record<string, unknown>>(
+    `${MERCHANT_RAMP}/onramp`,
+    { method: "POST", body: payload, timeoutMs: 60_000, buyerIp: ctx.buyerIp },
   );
+
+  const payment = data.payment as Record<string, unknown> | undefined;
+
+  return {
+    ...data,
+    merchantReference: data.reference ?? data.merchantReference,
+    momoPromptSent: data.momoPromptSent ?? payment?.momoPromptSent,
+    requiresOtp: data.requiresOtp ?? payment?.requiresOtp,
+    paymentInstructions: data.paymentInstructions ?? data.payment,
+    order_secret: data.orderSecret ?? data.order_secret,
+  } as Record<string, unknown>;
 }
 
 export async function sendMobileMoney(
@@ -198,75 +371,144 @@ export async function sendMobileMoney(
     network_provider: string;
     order_secret?: string;
   },
+  ctx: MorapayCallContext = {},
 ) {
-  return morapayFetch<Record<string, unknown>>(
-    `/api/public/ramp/onramp/${encodeURIComponent(merchantReference)}/mobile-money`,
-    { method: "POST", body, timeoutMs: 60_000 },
+  // Documented gap: no dedicated MoMo re-prompt route in merchant-ramp.md —
+  // this path mirrors the public flow for merchants that enable it server-side.
+  const data = await morapayFetch<Record<string, unknown>>(
+    `${MERCHANT_RAMP}/transactions/${encodeURIComponent(merchantReference)}/mobile-money`,
+    { method: "POST", body, timeoutMs: 60_000, buyerIp: ctx.buyerIp },
   );
+  return {
+    ...data,
+    requiresOtp: data.requiresOtp,
+    paymentInstructions: data.paymentInstructions ?? data.payment,
+  };
 }
 
-export async function verifyOtp(body: {
-  wallet_address: string;
-  merchant_reference: string;
-  otp: string;
-}) {
+export async function verifyOtp(
+  body: {
+    wallet_address: string;
+    merchant_reference: string;
+    otp: string;
+  },
+  ctx: MorapayCallContext = {},
+) {
   return morapayFetch<Record<string, unknown>>(
-    "/api/public/ramp/onramp/mobile-money/verify-otp",
-    { method: "POST", body, timeoutMs: 60_000 },
+    `${MERCHANT_RAMP}/transactions/${encodeURIComponent(body.merchant_reference)}/otp`,
+    {
+      method: "POST",
+      body: { otp: body.otp, walletAddress: body.wallet_address },
+      timeoutMs: 60_000,
+      buyerIp: ctx.buyerIp,
+    },
   );
 }
 
 export async function confirmOnramp(
   merchantReference: string,
   body: { wallet_address: string },
+  ctx: MorapayCallContext = {},
 ) {
-  return morapayFetch<Record<string, unknown>>(
-    `/api/public/ramp/onramp/${encodeURIComponent(merchantReference)}/confirm`,
-    { method: "POST", body, timeoutMs: 60_000 },
-  );
+  const tx = await getTransaction(merchantReference, body.wallet_address, ctx);
+  return {
+    ...tx,
+    bankDeposit: tx.bankDeposit ?? tx.bank_deposit ?? tx.payment,
+  };
 }
 
 export async function getTransaction(
   merchantReference: string,
   walletAddress: string,
+  ctx: MorapayCallContext = {},
 ) {
-  return morapayFetch<Record<string, unknown>>(
-    `/api/public/ramp/transactions/${encodeURIComponent(merchantReference)}`,
-    { searchParams: { wallet_address: walletAddress } },
+  const data = await morapayFetch<Record<string, unknown>>(
+    `${MERCHANT_RAMP}/transactions/${encodeURIComponent(merchantReference)}`,
+    {
+      searchParams: walletAddress ? { wallet_address: walletAddress } : undefined,
+      buyerIp: ctx.buyerIp,
+    },
   );
+  return normalizeTransaction(data);
 }
 
-export async function listTransactions(walletAddress: string, limit = 10) {
-  return morapayFetch<unknown>("/api/public/ramp/transactions", {
-    searchParams: { wallet_address: walletAddress, limit: String(limit) },
+export async function listTransactions(
+  walletAddress: string,
+  limit = 10,
+  ctx: MorapayCallContext = {},
+) {
+  const data = await morapayFetch<unknown>(`${MERCHANT_RAMP}/transactions`, {
+    searchParams: { limit: String(limit), wallet_address: walletAddress },
+    buyerIp: ctx.buyerIp,
   });
+  if (Array.isArray(data)) return data;
+  const envelope = data as { items?: unknown[]; data?: unknown[] };
+  const items = envelope.items ?? envelope.data ?? [];
+  return (items as Record<string, unknown>[])
+    .map(normalizeTransaction)
+    .filter(
+      (tx) =>
+        !walletAddress ||
+        String(tx.wallet_address ?? tx.destinationWallet ?? "").toLowerCase() ===
+          walletAddress.toLowerCase(),
+    );
 }
 
-export async function initiateOfframp(body: Record<string, unknown>) {
-  return morapayFetch<Record<string, unknown>>(
-    "/api/public/ramp/offramp/initiate",
-    { method: "POST", body, timeoutMs: 60_000 },
+export async function initiateOfframp(
+  body: Record<string, unknown>,
+  ctx: MorapayCallContext = {},
+) {
+  const payload = {
+    currency: String(body.currency ?? "").toLowerCase(),
+    amount: String(body.token_amount ?? body.amount ?? ""),
+    destinationWallet: body.wallet_address,
+    bankCode: body.bank_code ?? body.bankCode,
+    accountNumber: body.account_number ?? body.accountNumber,
+    customerName: body.customer_name,
+    targetChainId: body.source_chain_id,
+    targetTokenSymbol: body.source_token_symbol,
+    targetTokenAddress: body.source_token_address,
+    referralCode: body.referral_code,
+    turnstileToken: body.turnstileToken,
+    clientChannel: body.client_channel,
+    clientIp: ctx.buyerIp,
+  };
+
+  const data = await morapayFetch<Record<string, unknown>>(
+    `${MERCHANT_RAMP}/offramp`,
+    { method: "POST", body: payload, timeoutMs: 60_000, buyerIp: ctx.buyerIp },
   );
+  const deposit = data.deposit as Record<string, unknown> | undefined;
+  return {
+    ...data,
+    merchantReference: data.reference ?? data.merchantReference,
+    depositAddress: deposit?.address ?? data.depositAddress,
+  } as Record<string, unknown>;
 }
 
 export async function confirmOfframp(
   ref: string,
   body: { wallet_address: string },
+  ctx: MorapayCallContext = {},
 ) {
-  return morapayFetch<Record<string, unknown>>(
-    `/api/public/ramp/offramp/${encodeURIComponent(ref)}/confirm`,
-    { method: "POST", body, timeoutMs: 60_000 },
-  );
+  const tx = await getTransaction(ref, body.wallet_address, ctx);
+  return {
+    ...tx,
+    depositAddress:
+      tx.depositAddress ?? tx.deposit_address ?? (tx.deposit as { address?: string })?.address,
+    deposit_address:
+      tx.deposit_address ?? tx.depositAddress,
+  };
 }
 
 export async function hubForward(
   ref: string,
   body: { wallet_address: string; deposit_tx_hash: string },
+  ctx: MorapayCallContext = {},
 ) {
-  // UNVERIFIED — behind adapter + tests
   return morapayFetch<Record<string, unknown>>(
-    `/api/public/ramp/offramp/${encodeURIComponent(ref)}/hub-forward`,
-    { method: "POST", body, timeoutMs: 60_000 },
+    `${MERCHANT_RAMP}/transactions/${encodeURIComponent(ref)}/hub-forward`,
+    { method: "POST", body, timeoutMs: 60_000, buyerIp: ctx.buyerIp },
   );
 }
 
@@ -281,3 +523,5 @@ export function isTokenSupported(
       t.chainId === chainId && t.tokenAddress.toLowerCase() === needle,
   );
 }
+
+export { merchantSigningEnabled };

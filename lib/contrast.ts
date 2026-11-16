@@ -52,3 +52,14 @@ export function accentForLightText(
   }
   return color;
 }
+
+/** Cream on dark heroes, plum on light — for hero band copy. */
+export function textOnHero(
+  heroBg: string,
+  lightText = "#F8F6EC",
+  darkText = "#2B0A30",
+): string {
+  return contrastRatio(lightText, heroBg) >= contrastRatio(darkText, heroBg)
+    ? lightText
+    : darkText;
+}

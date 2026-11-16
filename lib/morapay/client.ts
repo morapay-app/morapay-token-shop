@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { signMorapayRequest } from "./sign";
+import {
+  getMerchantConfigStatus,
+  requireMerchantCredentials,
+} from "./merchant-config";
+import { morapayBuyerIpHeaders } from "./buyer-ip";
 
 export const EnvelopeSchema = z.object({
   success: z.boolean(),
@@ -55,11 +61,16 @@ export function mapEnvelopeError(
 }
 
 export type FetchOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
-  /** Default 20s; money steps use 60s. */
+  /** Pre-serialized body (use when stable signing bytes matter). */
+  rawBody?: string;
   timeoutMs?: number;
   searchParams?: Record<string, string | undefined>;
+  /** Shopper IP for ramp abuse attribution (never the deployment egress IP alone). */
+  buyerIp?: string;
+  /** When false, skip merchant signing (public fallback only; off by default). */
+  requireSigning?: boolean;
 };
 
 function baseUrl(): string {
@@ -69,29 +80,148 @@ function baseUrl(): string {
   );
 }
 
+function buildPath(path: string, searchParams?: FetchOptions["searchParams"]) {
+  const pathOnly = path.startsWith("http")
+    ? new URL(path).pathname + new URL(path).search
+    : path;
+  if (!searchParams) {
+    return pathOnly.startsWith("/") ? pathOnly : `/${pathOnly}`;
+  }
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(searchParams)) {
+    if (v != null && v !== "") qs.set(k, v);
+  }
+  const q = qs.toString();
+  const normalized = pathOnly.startsWith("/") ? pathOnly : `/${pathOnly}`;
+  return q ? `${normalized}?${q}` : normalized;
+}
+
+function allowPublicFallback(): boolean {
+  return process.env.MORAPAY_ALLOW_PUBLIC_FALLBACK === "true";
+}
+
+/** Legacy unsigned Morapay routes — only when MORAPAY_ALLOW_PUBLIC_FALLBACK=true. */
+export function toPublicApiPath(pathWithQuery: string): string {
+  const [path, query] = pathWithQuery.split("?");
+  let mapped = path;
+  if (mapped.startsWith("/api/v1/merchant/ramp")) {
+    mapped = mapped.replace("/api/v1/merchant/ramp", "/api/public/ramp");
+  } else if (mapped === "/api/v1/quotes/checkout") {
+    mapped = "/api/public/quotes";
+  } else if (mapped.startsWith("/api/v1/merchant")) {
+    mapped = mapped.replace("/api/v1/merchant", "/api/public");
+  }
+  return query ? `${mapped}?${query}` : mapped;
+}
+
+/**
+ * Signed Morapay API fetch. All token-shop routes use merchant (or signed v1) paths.
+ */
 export async function morapayFetch<T>(
   path: string,
   options: FetchOptions = {},
 ): Promise<T> {
   const timeoutMs = options.timeoutMs ?? 20_000;
-  const url = new URL(path.startsWith("http") ? path : `${baseUrl()}${path}`);
-  if (options.searchParams) {
-    for (const [k, v] of Object.entries(options.searchParams)) {
-      if (v != null && v !== "") url.searchParams.set(k, v);
+  const method = options.method ?? (options.body != null ? "POST" : "GET");
+  const pathWithQuery = buildPath(path, options.searchParams);
+  const url = path.startsWith("http")
+    ? path
+    : `${baseUrl()}${pathWithQuery}`;
+
+  const rawBody =
+    options.rawBody ??
+    (options.body != null ? JSON.stringify(options.body) : "");
+
+  const merchantReady = getMerchantConfigStatus().ready;
+  const useSigning = options.requireSigning !== false && merchantReady;
+
+  if (!useSigning) {
+    if (!allowPublicFallback() && options.requireSigning !== false) {
+      throw new MorapayApiError({
+        code: "merchant.keys.missing",
+        message:
+          "Morapay merchant API keys are not configured on this shop server.",
+        status: 503,
+      });
+    }
+    const publicPath = toPublicApiPath(pathWithQuery);
+    const publicUrl = `${baseUrl()}${publicPath}`;
+  let fallbackBody = rawBody;
+  if (
+    pathWithQuery.startsWith("/api/v1/quotes/checkout") &&
+    rawBody
+  ) {
+    try {
+      const parsed = JSON.parse(rawBody) as Record<string, unknown>;
+      fallbackBody = JSON.stringify({
+        action: "ONRAMP",
+        inputAmount: parsed.inputAmount,
+        inputCurrency: String(parsed.inputCurrency ?? "").toUpperCase(),
+        outputCurrency: String(parsed.targetTokenSymbol ?? "").toUpperCase(),
+        chain: String(parsed.targetChainId ?? ""),
+      });
+    } catch {
+      /* keep rawBody */
     }
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const res = await fetch(url.toString(), {
-      method: options.method ?? (options.body ? "POST" : "GET"),
+    return executeFetch<T>(publicUrl, {
+      method,
       headers: {
         Accept: "application/json",
-        "Content-Type": "application/json",
+        ...(fallbackBody ? { "Content-Type": "application/json" } : {}),
+        ...morapayBuyerIpHeaders(options.buyerIp ?? ""),
       },
-      body: options.body != null ? JSON.stringify(options.body) : undefined,
+      body: fallbackBody || undefined,
+      timeoutMs,
+      pathForError: publicPath,
+    });
+  }
+
+  const { publicKey, secretKey } = requireMerchantCredentials();
+  const signPath = pathWithQuery.startsWith("/")
+    ? pathWithQuery
+    : `/${pathWithQuery}`;
+
+  const signed = signMorapayRequest({
+    publicKey,
+    secret: secretKey,
+    method,
+    pathWithQuery: signPath,
+    rawBody: method === "GET" || method === "DELETE" ? "" : rawBody,
+  });
+
+  return executeFetch<T>(url, {
+    method,
+    headers: {
+      Accept: "application/json",
+      ...(rawBody ? { "Content-Type": "application/json" } : {}),
+      ...signed,
+      ...morapayBuyerIpHeaders(options.buyerIp ?? ""),
+    },
+    body: rawBody || undefined,
+    timeoutMs,
+    pathForError: signPath,
+  });
+}
+
+type ExecuteOpts = {
+  method: string;
+  headers: Record<string, string>;
+  body?: string;
+  timeoutMs: number;
+  pathForError: string;
+};
+
+async function executeFetch<T>(url: string, opts: ExecuteOpts): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), opts.timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      method: opts.method,
+      headers: opts.headers,
+      body: opts.body,
       signal: controller.signal,
       cache: "no-store",
     });

@@ -2,6 +2,37 @@ import { z } from "zod";
 
 const hexColor = z.string().regex(/^#([0-9a-f]{6})$/i);
 
+export const CultureBlockSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("quote"),
+    text: z.string().min(1).max(280),
+    by: z.string().max(80).optional(),
+  }),
+  z.object({
+    type: z.literal("blurb"),
+    title: z.string().min(1).max(80),
+    body: z.string().min(1).max(420),
+  }),
+  z.object({
+    type: z.literal("pulse"),
+    label: z.string().min(1).max(60),
+    detail: z.string().min(1).max(160),
+    href: z.string().url().optional(),
+  }),
+  z.object({
+    type: z.literal("post"),
+    title: z.string().min(1).max(100),
+    body: z.string().min(1).max(320),
+    source: z.string().max(40).optional(),
+    href: z.string().url().optional(),
+  }),
+  z.object({
+    type: z.literal("cta"),
+    label: z.string().min(1).max(60),
+    href: z.string().url(),
+  }),
+]);
+
 export const PaymentMethodSchema = z.object({
   id: z.string(),
   kind: z.enum(["mobile_money", "bank_transfer", "card"]),
@@ -86,6 +117,26 @@ export const ShopConfigSchema = z
         }),
       )
       .default([]),
+    /**
+     * Token-culture rails around the buy widget. When set, the shop stage
+     * reads as that token's page (story, quotes, market pulse, posts) instead
+     * of a generic Morapay shell. Reusable for every shop.
+     */
+    culture: z
+      .object({
+        enabled: z.boolean().default(true),
+        homeUrl: z.string().url().optional(),
+        stageBg: z.string().optional(),
+        stageText: z.string().optional(),
+        accent: hexColor.optional(),
+        brandLine: z.string().min(1),
+        roar: z.string().optional(),
+        marquee: z.array(z.string()).default([]),
+        visual: z.string().optional(),
+        left: z.array(CultureBlockSchema).default([]),
+        right: z.array(CultureBlockSchema).default([]),
+      })
+      .optional(),
     faqExtra: z
       .array(z.object({ q: z.string(), a: z.string() }))
       .default([]),
@@ -141,11 +192,22 @@ export function lintCopy(text: string): string[] {
 }
 
 export function lintShopConfig(cfg: ShopConfigInput): string[] {
+  const cultureBlobs =
+    cfg.culture == null
+      ? []
+      : [
+          cfg.culture.brandLine,
+          cfg.culture.roar ?? "",
+          ...(cfg.culture.marquee ?? []),
+          ...(cfg.culture.left ?? []).flatMap((b) => cultureBlockText(b)),
+          ...(cfg.culture.right ?? []).flatMap((b) => cultureBlockText(b)),
+        ];
   const blobs: string[] = [
     cfg.token.description,
     cfg.brand.headline ?? "",
     cfg.brand.subline ?? "",
     ...(cfg.faqExtra ?? []).flatMap((f) => [f.q, f.a]),
+    ...cultureBlobs,
   ];
   const hits: string[] = [];
   for (const blob of blobs) {
@@ -153,3 +215,22 @@ export function lintShopConfig(cfg: ShopConfigInput): string[] {
   }
   return [...new Set(hits)];
 }
+
+function cultureBlockText(
+  block: z.input<typeof CultureBlockSchema>,
+): string[] {
+  switch (block.type) {
+    case "quote":
+      return [block.text, block.by ?? ""];
+    case "blurb":
+      return [block.title, block.body];
+    case "pulse":
+      return [block.label, block.detail];
+    case "post":
+      return [block.title, block.body, block.source ?? ""];
+    case "cta":
+      return [block.label];
+  }
+}
+
+export type CultureBlock = z.infer<typeof CultureBlockSchema>;

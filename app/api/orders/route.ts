@@ -92,13 +92,17 @@ export async function POST(req: Request) {
     }
 
     // Fresh quote — ignore client token overrides
-    const quote = await getQuote({
-      action: "ONRAMP",
-      inputAmount: body.fiatAmount,
-      inputCurrency: body.currency,
-      outputCurrency: shop.token.ticker,
-      chain: String(shop.token.chainId),
-    });
+    const morapayCtx = { buyerIp: ip };
+    const quote = await getQuote(
+      {
+        action: "ONRAMP",
+        inputAmount: body.fiatAmount,
+        inputCurrency: body.currency,
+        outputCurrency: shop.token.ticker,
+        chain: String(shop.token.chainId),
+      },
+      morapayCtx,
+    );
 
     const amountNum = Number(body.fiatAmount);
     if (country.caps) {
@@ -141,7 +145,7 @@ export async function POST(req: Request) {
 
     // Idempotency: reuse open onramp from last 5 min with same amount/currency
     try {
-      const existing = await listTransactions(addr.normalized, 10);
+      const existing = await listTransactions(addr.normalized, 10, morapayCtx);
       const items = Array.isArray(existing)
         ? existing
         : ((existing as { items?: unknown[] })?.items ?? []);
@@ -185,9 +189,10 @@ export async function POST(req: Request) {
       network_provider: body.networkProvider ?? method.networkProvider,
       referral_code: referral,
       turnstileToken: body.turnstileToken,
+      payment_method: body.methodKind,
     };
 
-    const initiated = await initiateOnramp(initiateBody);
+    const initiated = await initiateOnramp(initiateBody, morapayCtx);
     const ref = String(
       initiated.merchantReference ?? initiated.merchant_reference ?? "",
     );
@@ -207,13 +212,17 @@ export async function POST(req: Request) {
 
       if (!momoPromptSent && phoneLocal) {
         try {
-          const mm = await sendMobileMoney(ref, {
-            wallet_address: addr.normalized,
-            phone_number: phoneLocal,
-            network_provider:
-              body.networkProvider ?? method.networkProvider ?? "MTN",
-            order_secret: orderSecret,
-          });
+          const mm = await sendMobileMoney(
+            ref,
+            {
+              wallet_address: addr.normalized,
+              phone_number: phoneLocal,
+              network_provider:
+                body.networkProvider ?? method.networkProvider ?? "MTN",
+              order_secret: orderSecret,
+            },
+            morapayCtx,
+          );
           requiresOtp = mm.requiresOtp === true || requiresOtp;
           instructions = mm.paymentInstructions ?? instructions;
         } catch (err) {
@@ -238,9 +247,11 @@ export async function POST(req: Request) {
     }
 
     // Bank transfer
-    const confirmed = await confirmOnramp(ref, {
-      wallet_address: addr.normalized,
-    });
+    const confirmed = await confirmOnramp(
+      ref,
+      { wallet_address: addr.normalized },
+      morapayCtx,
+    );
     const bankDeposit =
       confirmed.bankDeposit ??
       confirmed.bank_deposit ??

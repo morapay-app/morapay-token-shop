@@ -16,7 +16,6 @@ type Props = {
   methods: Method[];
   methodId: string;
   phone: string;
-  networkProvider: string;
   customerName: string;
   showNameField: boolean;
   error: string | null;
@@ -27,7 +26,6 @@ type Props = {
     networkProvider?: string,
   ) => void;
   onPhone: (phone: string, networkHint?: string) => void;
-  onNetwork: (n: string) => void;
   onName: (n: string) => void;
   onBack: () => void;
   onNext: () => void;
@@ -87,24 +85,6 @@ export function PaymentStep(props: Props) {
               }}
               placeholder="0241234567"
             />
-          </div>
-          <div>
-            <label htmlFor="network" className="label">
-              Network
-            </label>
-            <select
-              id="network"
-              className="field"
-              value={props.networkProvider}
-              onChange={(e) => props.onNetwork(e.target.value)}
-            >
-              <option value="MTN">MTN</option>
-              <option value="Vodafone">Telecel / Vodafone</option>
-              <option value="AirtelTigo">AirtelTigo</option>
-            </select>
-            <p className="text-xs text-[var(--mp-text-muted)] mt-1">
-              Auto-detected from your number — change if you ported it.
-            </p>
           </div>
           {props.showNameField && (
             <div>

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { shopConfig } from "@/shop.config";
@@ -33,6 +34,26 @@ const instrument = localFont({
   display: "swap",
 });
 
+/** Per-token culture stage (AMEM uses Unbounded + Space Grotesk). */
+const cultureDisplay = localFont({
+  src: [
+    { path: "./fonts/unbounded-800.ttf", weight: "800", style: "normal" },
+    { path: "./fonts/unbounded-900.ttf", weight: "900", style: "normal" },
+  ],
+  variable: "--font-culture-display",
+  display: "swap",
+});
+
+const cultureBody = localFont({
+  src: [
+    { path: "./fonts/space-grotesk-400.ttf", weight: "400", style: "normal" },
+    { path: "./fonts/space-grotesk-500.ttf", weight: "500", style: "normal" },
+    { path: "./fonts/space-grotesk-700.ttf", weight: "700", style: "normal" },
+  ],
+  variable: "--font-culture-body",
+  display: "swap",
+});
+
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || shopConfig.siteUrl;
 
@@ -59,7 +80,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: shopConfig.culture?.stageBg ?? shopConfig.brand.heroBg ?? "#ffffff",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -79,7 +100,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${manrope.variable} ${instrument.variable} antialiased`}
+        className={`${manrope.variable} ${instrument.variable} ${cultureDisplay.variable} ${cultureBody.variable} antialiased`}
         style={
           {
             "--brand-accent": accent,
@@ -89,7 +110,7 @@ export default function RootLayout({
             ...(shopConfig.brand.overridePrimary
               ? { "--mp-button-bg": buttonBg, "--mp-button-text": accentText }
               : {}),
-          } as React.CSSProperties
+          } as CSSProperties
         }
       >
         {children}

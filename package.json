@@ -62,5 +62,6 @@
     ]
   },
   "license": "MIT",
-  "description": "Cloneable Morapay token shop — buy tokens with mobile money or bank"
+  "description": "Cloneable Morapay token shop \u2014 buy tokens with mobile money or bank",
+  "packageManager": "pnpm@10.33.4"
 }

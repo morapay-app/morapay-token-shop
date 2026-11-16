@@ -188,15 +188,16 @@ export function buyReducer(state: BuyState, action: BuyAction): BuyState {
           error: action.message ?? "Order failed.",
         };
       }
+      // Soft delay: keep waiting with the countdown until the client hits 11 min.
       if (action.phase === "delayed") {
         return {
           ...state,
-          step: "still_processing",
-          error: action.message ?? null,
+          step: "delivering",
+          error: action.message ?? state.error,
         };
       }
       if (action.phase === "delivering") {
-        return { ...state, step: "delivering" };
+        return { ...state, step: "delivering", error: null };
       }
       return state;
     }

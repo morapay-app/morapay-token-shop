@@ -1,6 +1,6 @@
 /**
  * THE ONLY FILE A NEW SHOP EDITS (plus /public/brand/* and env vars).
- * Default example: MILAN from section 13.
+ * Default template uses examples/milan.config.ts — copy an example or run `pnpm new-shop`.
  */
 import milanConfig from "./examples/milan.config";
 import { ShopConfigSchema, type ShopConfig } from "./config/schema";

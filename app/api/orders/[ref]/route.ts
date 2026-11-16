@@ -32,8 +32,8 @@ export async function GET(
       );
     }
 
-    const tx = await getTransaction(ref, wallet);
-    const interpreted = interpretStatus(tx);
+    const tx = await getTransaction(ref, wallet, { buyerIp: ip });
+    const interpreted = interpretStatus(tx as Parameters<typeof interpretStatus>[0]);
     const shop = getShopConfig();
     const chain = getChain(shop.token.chainId);
 
