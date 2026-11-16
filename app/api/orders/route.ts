@@ -100,6 +100,7 @@ export async function POST(req: Request) {
         inputCurrency: body.currency,
         outputCurrency: shop.token.ticker,
         chain: String(shop.token.chainId),
+        tokenAddress: shop.token.contract,
       },
       morapayCtx,
     );

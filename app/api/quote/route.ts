@@ -40,6 +40,7 @@ export async function POST(req: Request) {
           inputCurrency: shop.token.ticker,
           outputCurrency: body.inputCurrency,
           chain: String(shop.token.chainId),
+          tokenAddress: shop.token.contract,
         },
         { buyerIp: ip },
       );
@@ -53,6 +54,7 @@ export async function POST(req: Request) {
         inputCurrency: body.inputCurrency,
         outputCurrency: shop.token.ticker,
         chain: String(shop.token.chainId),
+        tokenAddress: shop.token.contract,
       },
       { buyerIp: ip },
     );

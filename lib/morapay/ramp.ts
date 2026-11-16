@@ -105,18 +105,17 @@ export type MorapayCallContext = {
   buyerIp?: string;
 };
 
-function merchantEnvUpper(): "TEST" | "LIVE" {
-  const env = (process.env.MORAPAY_ENV ?? "test").toLowerCase();
-  return env === "live" ? "LIVE" : "TEST";
-}
-
 function normalizeRampConfig(data: unknown): RampConfig {
   const raw = data as Record<string, unknown>;
   if (raw.supportedOnrampTargets) return RampConfigSchema.parse(data);
   return RampConfigSchema.parse({
     supportedCurrencies:
       (raw.supportedCurrencies as string[]) ??
-      (raw.corridors as { currency: string }[])?.map((c) => c.currency) ??
+      // Merchant v1 /ramp/config returns `currencies` (public ramp used `supportedCurrencies`).
+      (raw.currencies as string[]) ??
+      (Array.isArray(raw.corridors)
+        ? (raw.corridors as { currency: string }[]).map((c) => c.currency)
+        : undefined) ??
       [],
     fiatCorridors: raw.fiatCorridors ?? raw.corridors ?? [],
     supportedOnrampTargets: raw.supportedOnrampTargets ?? raw.onrampTargets ?? [],
@@ -157,7 +156,22 @@ export async function getRampConfig(ctx: MorapayCallContext = {}): Promise<RampC
   const data = await morapayFetch<unknown>(`${MERCHANT_RAMP}/config`, {
     buyerIp: ctx.buyerIp,
   });
-  return normalizeRampConfig(data);
+  const raw = (data ?? {}) as Record<string, unknown>;
+  if (raw.supportedOnrampTargets || raw.onrampTargets) {
+    return normalizeRampConfig(data);
+  }
+  // Merchant v1 /ramp/config has no token list: buy targets / sell sources come from
+  // GET /ramp/tokens (same hub asset list the public ramp exposed as supportedOnrampTargets).
+  const tokens = await morapayFetch<unknown>(`${MERCHANT_RAMP}/tokens`, {
+    buyerIp: ctx.buyerIp,
+  });
+  const list = Array.isArray(tokens) ? tokens : [];
+  return normalizeRampConfig({
+    ...raw,
+    supportedCurrencies: raw.supportedCurrencies ?? raw.currencies ?? [],
+    supportedOnrampTargets: list,
+    supportedOfframpSources: raw.supportedOfframpSources ?? list,
+  });
 }
 
 export async function getLimits(
@@ -183,26 +197,6 @@ export async function getBanks(currency: string, ctx: MorapayCallContext = {}) {
   return BanksResponseSchema.parse(data);
 }
 
-function mapCheckoutQuoteRow(
-  row: Record<string, unknown>,
-  input: { amount: string; currency: string; chain: string; ticker: string },
-): Quote {
-  const payout = String(row.payoutAmount ?? row.amount ?? row.targetAmount ?? "0");
-  return {
-    quoteId: String(row.quoteId ?? row.id ?? `checkout_${Date.now()}`),
-    expiresAt: String(
-      row.expiresAt ?? new Date(Date.now() + 5 * 60_000).toISOString(),
-    ),
-    input: { amount: input.amount, currency: input.currency.toUpperCase() },
-    output: {
-      amount: payout,
-      currency: String(row.tokenSymbol ?? input.ticker).toUpperCase(),
-      chain: String(row.chainId ?? input.chain),
-    },
-    fees: row.fees as Quote["fees"],
-  };
-}
-
 /**
  * Token-shop quote: signed POST /api/v1/quotes/checkout (Morapay quotes API).
  * Fiat-only merchant ramp quote does not return per-token payout rows.
@@ -214,48 +208,59 @@ export async function getQuote(
     inputCurrency: string;
     outputCurrency: string;
     chain: string | number;
+    /** Token contract (buy target / sell source) — disambiguates symbols across chains. */
+    tokenAddress?: string;
   },
   ctx: MorapayCallContext = {},
 ): Promise<Quote> {
   if (input.action === "ONRAMP") {
+    // Server-priced buy quote from the merchant ramp pricing engine (signed). The legacy
+    // /api/v1/quotes/checkout route is not exposed on api.morapay.io.
     const body = {
-      inputAmount: String(input.inputAmount),
-      inputCurrency: input.inputCurrency.toUpperCase(),
+      direction: "onramp",
+      currency: input.inputCurrency.toLowerCase(),
+      amount: String(input.inputAmount),
+      targetChainId: Number(input.chain),
       targetTokenSymbol: input.outputCurrency.toUpperCase(),
-      targetChainId: String(input.chain),
-      environment: merchantEnvUpper(),
+      ...(input.tokenAddress ? { targetTokenAddress: input.tokenAddress } : {}),
     };
     const data = await morapayFetch<Record<string, unknown>>(
-      "/api/v1/quotes/checkout",
+      `${MERCHANT_RAMP}/quote`,
       { method: "POST", body, buyerIp: ctx.buyerIp },
     );
-    const rows = (data.rows as Record<string, unknown>[]) ?? [];
-    const match =
-      rows.find(
-        (r) =>
-          String(r.tokenSymbol ?? "").toUpperCase() ===
-            input.outputCurrency.toUpperCase() &&
-          String(r.chainId ?? "") === String(input.chain),
-      ) ?? rows[0];
-    if (!match) {
-      throw new Error("No checkout quote row for this token and chain.");
+    const target = (data.target ?? {}) as Record<string, unknown>;
+    const estimated = target.estimatedAmount;
+    if (estimated == null || String(estimated) === "") {
+      throw new Error("No buy quote for this token and chain.");
     }
-    return QuoteSchema.parse(
-      mapCheckoutQuoteRow(match, {
-        amount: String(input.inputAmount),
-        currency: input.inputCurrency,
-        chain: String(input.chain),
-        ticker: input.outputCurrency,
-      }),
-    );
+    return QuoteSchema.parse({
+      quoteId: String(data.quoteId ?? data.id ?? `onramp_${Date.now()}`),
+      expiresAt: String(
+        data.expiresAt ?? new Date(Date.now() + 5 * 60_000).toISOString(),
+      ),
+      exchangeRate:
+        typeof data.rateLabel === "string" ? data.rateLabel : undefined,
+      input: {
+        amount: String(data.customerAmount ?? data.amount ?? input.inputAmount),
+        currency: input.inputCurrency.toUpperCase(),
+      },
+      output: {
+        amount: String(estimated),
+        currency: String(target.symbol ?? input.outputCurrency).toUpperCase(),
+        chain: String(target.chainId ?? input.chain),
+      },
+      feeCapture: data.merchantFee ?? undefined,
+    });
   }
 
   const body = {
     direction: "offramp",
     currency: input.outputCurrency.toLowerCase(),
     amount: String(input.inputAmount),
-    targetTokenSymbol: input.inputCurrency.toUpperCase(),
-    targetChainId: String(input.chain),
+    // Merchant ramp quote: a sell's token is the *source* asset.
+    sourceTokenSymbol: input.inputCurrency.toUpperCase(),
+    sourceChainId: Number(input.chain),
+    ...(input.tokenAddress ? { sourceTokenAddress: input.tokenAddress } : {}),
   };
   const data = await morapayFetch<Record<string, unknown>>(
     `${MERCHANT_RAMP}/quote`,
@@ -441,9 +446,9 @@ export async function listTransactions(
     searchParams: { limit: String(limit), wallet_address: walletAddress },
     buyerIp: ctx.buyerIp,
   });
-  if (Array.isArray(data)) return data;
+  // Always filter by wallet: the merchant list is business-wide, so never return other buyers' orders.
   const envelope = data as { items?: unknown[]; data?: unknown[] };
-  const items = envelope.items ?? envelope.data ?? [];
+  const items = Array.isArray(data) ? data : (envelope.items ?? envelope.data ?? []);
   return (items as Record<string, unknown>[])
     .map(normalizeTransaction)
     .filter(

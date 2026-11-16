@@ -30,6 +30,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Inline SHOP_ID into server + client bundles so shop.config.ts picks the same shop everywhere.
+  env: { SHOP_ID: process.env.SHOP_ID ?? "" },
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
