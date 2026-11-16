@@ -3,6 +3,17 @@ const MIN_CODE = /(?:^|[._-])(?:min(?:imum)?|too_?low|too_?small|below_?min)/i;
 const MIN_TEXT =
   /below\s+(?:the\s+)?minimum|minimum\s+(?:buy|order|amount|fiat)|amount\s+is\s+too\s+(?:low|small)/i;
 
+export function belowMinimumAmountMessage(
+  minFiat: number,
+  currency: string,
+): string {
+  return `Enter at least ${minFiat} ${currency.toUpperCase()}.`;
+}
+
+function isRampLimitCode(code?: string): boolean {
+  return code === "ramp.limit";
+}
+
 /** User-facing quote failure copy (Morapay codes/messages → clear shop wording). */
 export function quoteClientMessage(
   code: string | undefined,
@@ -10,12 +21,13 @@ export function quoteClientMessage(
   opts?: { minFiat?: number; currency?: string },
 ): string {
   const isBelowMin =
+    isRampLimitCode(code) ||
     (code && MIN_CODE.test(code)) ||
     (message != null && MIN_TEXT.test(message));
 
   if (isBelowMin) {
     if (opts?.minFiat != null && opts.currency) {
-      return `Amount is below the minimum. Enter at least ${opts.minFiat} ${opts.currency}.`;
+      return belowMinimumAmountMessage(opts.minFiat, opts.currency);
     }
     if (message && !/something went wrong/i.test(message)) {
       return message;
@@ -34,6 +46,7 @@ export function isBelowMinimumQuoteError(
   message?: string,
 ): boolean {
   return (
+    isRampLimitCode(code) ||
     (code != null && MIN_CODE.test(code)) ||
     (message != null && MIN_TEXT.test(message))
   );

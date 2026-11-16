@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { getQuote } from "@/lib/morapay/ramp";
-import { MorapayApiError } from "@/lib/morapay/client";
+import { asMorapayApiError, isMorapayApiError } from "@/lib/morapay/client";
 import { getShopConfig } from "@/lib/shop-runtime";
 import { jsonOk, jsonErr } from "@/lib/api-response";
+import { onrampAmountBoundsError } from "@/lib/quote-amount-bounds";
 import {
   isBelowMinimumQuoteError,
   quoteClientMessage,
@@ -39,6 +40,17 @@ export async function POST(req: Request) {
     const body = BodySchema.parse(await req.json());
     inputCurrency = body.inputCurrency;
 
+    if (body.action === "ONRAMP") {
+      const boundsErr = onrampAmountBoundsError(
+        body.inputAmount,
+        body.inputCurrency,
+        shop,
+      );
+      if (boundsErr) {
+        return jsonErr(boundsErr, boundsErr.status);
+      }
+    }
+
     if (body.action === "OFFRAMP") {
       const quote = await getQuote(
         {
@@ -67,25 +79,26 @@ export async function POST(req: Request) {
     );
     return jsonOk(quote);
   } catch (err) {
-    const status = err instanceof MorapayApiError ? err.status : 502;
-    if (err instanceof MorapayApiError) {
+    const morapay = asMorapayApiError(err);
+    const status = morapay?.status ?? 502;
+    if (isMorapayApiError(err) && morapay) {
       const currency = inputCurrency?.toUpperCase();
       const country = currency
         ? getShopConfig().countries.list.find(
             (c) => c.currency.toUpperCase() === currency,
           )
         : undefined;
-      const message = isBelowMinimumQuoteError(err.code, err.message)
-        ? quoteClientMessage(err.code, err.message, {
+      const message = isBelowMinimumQuoteError(morapay.code, morapay.message)
+        ? quoteClientMessage(morapay.code, morapay.message, {
             minFiat: country?.caps?.minFiat,
             currency,
           })
-        : err.message;
+        : morapay.message;
       return jsonErr(
         {
           message,
-          code: err.code,
-          requestId: err.requestId,
+          code: morapay.code,
+          requestId: morapay.requestId,
           status,
         },
         status,

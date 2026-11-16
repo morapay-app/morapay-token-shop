@@ -44,6 +44,48 @@ export class MorapayApiError extends Error {
   }
 }
 
+function morapayErrorRecord(err: unknown): MorapayError | null {
+  if (typeof err !== "object" || err === null) return null;
+  const e = err as Record<string, unknown>;
+  if (typeof e.message !== "string") return null;
+  if (typeof e.status !== "number") return null;
+  return {
+    code: typeof e.code === "string" ? e.code : undefined,
+    message: e.message,
+    requestId: typeof e.requestId === "string" ? e.requestId : undefined,
+    retryAfterSec:
+      typeof e.retryAfterSec === "number" ? e.retryAfterSec : undefined,
+    status: e.status,
+  };
+}
+
+/** Cross-bundle safe: production may load two copies of MorapayApiError. */
+export function isMorapayApiError(err: unknown): boolean {
+  if (err instanceof MorapayApiError) return true;
+  if (typeof err !== "object" || err === null) return false;
+  const e = err as Record<string, unknown>;
+  if (e.name === "MorapayApiError") return morapayErrorRecord(err) != null;
+  return (
+    typeof e.code === "string" &&
+    typeof e.message === "string" &&
+    typeof e.status === "number"
+  );
+}
+
+export function asMorapayApiError(err: unknown): MorapayError | null {
+  if (!isMorapayApiError(err)) return null;
+  if (err instanceof MorapayApiError) {
+    return {
+      code: err.code,
+      message: err.message,
+      requestId: err.requestId,
+      retryAfterSec: err.retryAfterSec,
+      status: err.status,
+    };
+  }
+  return morapayErrorRecord(err);
+}
+
 export function mapEnvelopeError(
   envelope: z.infer<typeof EnvelopeSchema>,
   status: number,
@@ -51,14 +93,15 @@ export function mapEnvelopeError(
   const code = envelope.code;
   const display = envelope.displayMessage || envelope.safeMessage;
   const belowMin =
+    code === "ramp.limit" ||
     (code &&
       /(?:^|[._-])(?:min(?:imum)?|too_?low|too_?small|below_?min)/i.test(
         code,
       )) ||
-  (display != null &&
-    /below\s+(?:the\s+)?minimum|minimum\s+(?:buy|order|amount|fiat)|amount\s+is\s+too\s+(?:low|small)/i.test(
-      display,
-    ));
+    (display != null &&
+      /below\s+(?:the\s+)?minimum|minimum\s+(?:buy|order|amount|fiat)|amount\s+is\s+too\s+(?:low|small)/i.test(
+        display,
+      ));
 
   const message = belowMin
     ? envelope.howToFix ||
@@ -295,12 +338,13 @@ export function toClientError(err: unknown): {
   requestId?: string;
   retryAfterSec?: number;
 } {
-  if (err instanceof MorapayApiError) {
+  const morapay = asMorapayApiError(err);
+  if (morapay) {
     return {
-      code: err.code,
-      message: err.message,
-      requestId: err.requestId,
-      retryAfterSec: err.retryAfterSec,
+      code: morapay.code,
+      message: morapay.message,
+      requestId: morapay.requestId,
+      retryAfterSec: morapay.retryAfterSec,
     };
   }
   return { message: "Something went wrong. Please try again." };
