@@ -8,6 +8,7 @@ type Props = {
   amount: string;
   quote: QuoteView | null;
   quoteLoading?: boolean;
+  quoteError?: string | null;
   quickAmounts: number[];
   limits?: { minFiat: number; maxFiat: number };
   showFee: boolean;
@@ -117,6 +118,10 @@ export function AmountStep(props: Props) {
               Rate locks for {lockSec}s
             </p>
           </>
+        ) : props.quoteError ? (
+          <p className="text-sm text-[var(--mp-warning-text)]" role="alert">
+            {props.quoteError}
+          </p>
         ) : (
           <p className="text-sm text-[var(--mp-text-muted)]">
             Enter an amount to see your quote.

@@ -14,6 +14,7 @@ import { TelegramFallback } from "@/components/TelegramFallback";
 import { SetupRequired } from "@/components/SetupRequired";
 import { track } from "@/lib/analytics";
 import { WAIT_TOTAL_MS } from "@/lib/wait-phases";
+import { quoteClientMessage } from "@/lib/quote-client-message";
 
 type ShopApiConfig = {
   token: {
@@ -69,6 +70,7 @@ export function BuyWidget() {
     initialBuyState("GH", "GHS"),
   );
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
   const [waitStartedAt, setWaitStartedAt] = useState<number | null>(null);
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quoteReq = useRef(0);
@@ -116,11 +118,13 @@ export function BuyWidget() {
       if (!amount || Number(amount) <= 0) {
         quoteReq.current += 1;
         setQuoteLoading(false);
+        setQuoteError(null);
         dispatch({ type: "SET_QUOTE", quote: null });
         return;
       }
       const reqId = ++quoteReq.current;
       setQuoteLoading(true);
+      setQuoteError(null);
       try {
         const res = await fetch("/api/quote", {
           method: "POST",
@@ -134,6 +138,13 @@ export function BuyWidget() {
         const j = await res.json();
         if (reqId !== quoteReq.current) return;
         if (!j.success) {
+          const limits = activeCountry?.buyLimits;
+          setQuoteError(
+            quoteClientMessage(j.code, j.message, {
+              minFiat: limits?.minFiat,
+              currency,
+            }),
+          );
           dispatch({ type: "SET_QUOTE", quote: null });
           return;
         }
@@ -148,6 +159,7 @@ export function BuyWidget() {
           outputCurrency: q.output.currency,
           totalFee: q.fees?.totalFee,
         };
+        setQuoteError(null);
         dispatch({ type: "SET_QUOTE", quote: view });
         track("quote_viewed", { currency });
       } catch {
@@ -157,7 +169,7 @@ export function BuyWidget() {
         if (reqId === quoteReq.current) setQuoteLoading(false);
       }
     },
-    [],
+    [activeCountry?.buyLimits],
   );
 
   useEffect(() => {
@@ -394,6 +406,7 @@ export function BuyWidget() {
           amount={state.amount}
           quote={state.quote}
           quoteLoading={quoteLoading}
+          quoteError={quoteError}
           quickAmounts={activeCountry.quickAmounts ?? []}
           limits={activeCountry.buyLimits}
           showFee={config.fees.showFeeLine}

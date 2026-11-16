@@ -48,12 +48,27 @@ export function mapEnvelopeError(
   envelope: z.infer<typeof EnvelopeSchema>,
   status: number,
 ): MorapayError {
+  const code = envelope.code;
+  const display = envelope.displayMessage || envelope.safeMessage;
+  const belowMin =
+    (code &&
+      /(?:^|[._-])(?:min(?:imum)?|too_?low|too_?small|below_?min)/i.test(
+        code,
+      )) ||
+  (display != null &&
+    /below\s+(?:the\s+)?minimum|minimum\s+(?:buy|order|amount|fiat)|amount\s+is\s+too\s+(?:low|small)/i.test(
+      display,
+    ));
+
+  const message = belowMin
+    ? envelope.howToFix ||
+      display ||
+      "Amount is below the minimum for this payment method."
+    : display || "Something went wrong. Please try again.";
+
   return {
-    code: envelope.code,
-    message:
-      envelope.displayMessage ||
-      envelope.safeMessage ||
-      "Something went wrong. Please try again.",
+    code,
+    message,
     requestId: envelope.requestId,
     retryAfterSec: envelope.retryAfterSec,
     status,
