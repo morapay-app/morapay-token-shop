@@ -1,16 +1,21 @@
 /**
- * Read-only live smoke against Morapay (section 15).
- * Does NOT place orders.
+ * Read-only live smoke against Morapay (signed merchant API).
+ * Does NOT place orders. Requires merchant keys in env.
  */
 import { getRampConfig, getQuote, isTokenSupported } from "../lib/morapay/ramp";
-import amem from "../examples/amem.config";
+import { merchantSigningEnabled } from "../lib/morapay/merchant-config";
+import milan from "../examples/milan.config";
 
 async function main() {
+  if (!merchantSigningEnabled()) {
+    console.error("Set MORAPAY_MERCHANT_* keys before smoke:live");
+    process.exit(1);
+  }
   const config = await getRampConfig();
   const supported = isTokenSupported(
     config,
-    amem.token.chainId,
-    amem.token.contract,
+    milan.token.chainId,
+    milan.token.contract,
   );
   const corridors = config.supportedCurrencies.map((c) => c.toLowerCase());
   console.log(
@@ -29,7 +34,7 @@ async function main() {
     action: "ONRAMP",
     inputAmount: "100",
     inputCurrency: "GHS",
-    outputCurrency: "AMEM",
+    outputCurrency: milan.token.ticker,
     chain: "56",
   });
   console.log(

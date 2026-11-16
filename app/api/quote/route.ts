@@ -33,23 +33,29 @@ export async function POST(req: Request) {
     const body = BodySchema.parse(await req.json());
 
     if (body.action === "OFFRAMP") {
-      const quote = await getQuote({
-        action: "OFFRAMP",
-        inputAmount: body.inputAmount,
-        inputCurrency: shop.token.ticker,
-        outputCurrency: body.inputCurrency,
-        chain: String(shop.token.chainId),
-      });
+      const quote = await getQuote(
+        {
+          action: "OFFRAMP",
+          inputAmount: body.inputAmount,
+          inputCurrency: shop.token.ticker,
+          outputCurrency: body.inputCurrency,
+          chain: String(shop.token.chainId),
+        },
+        { buyerIp: ip },
+      );
       return jsonOk(quote);
     }
 
-    const quote = await getQuote({
-      action: "ONRAMP",
-      inputAmount: body.inputAmount,
-      inputCurrency: body.inputCurrency,
-      outputCurrency: shop.token.ticker,
-      chain: String(shop.token.chainId),
-    });
+    const quote = await getQuote(
+      {
+        action: "ONRAMP",
+        inputAmount: body.inputAmount,
+        inputCurrency: body.inputCurrency,
+        outputCurrency: shop.token.ticker,
+        chain: String(shop.token.chainId),
+      },
+      { buyerIp: ip },
+    );
     return jsonOk(quote);
   } catch (err) {
     return jsonErr(err, 502);

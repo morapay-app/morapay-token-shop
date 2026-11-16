@@ -23,7 +23,7 @@ export async function GET(req: Request) {
       .max(3)
       .parse(url.searchParams.get("currency")?.toLowerCase());
 
-    const data = await getBanks(currency);
+    const data = await getBanks(currency, { buyerIp: ip });
     return jsonOk(data);
   } catch (err) {
     return jsonErr(err, 502);

@@ -1,97 +1,118 @@
 # Morapay Token Shop
 
-Cloneable Next.js template for community token shops powered by Morapay’s public ramp API. Buy tokens with mobile money or bank — config + brand assets + env vars only.
+Cloneable **Next.js** template for community token shops. Each business runs its own shop with **Morapay Merchant API** keys so orders earn on that merchant account — not on Morapay’s unsigned public platform key.
 
 **Repo:** [morapay-app/morapay-token-shop](https://github.com/morapay-app/morapay-token-shop)
 
-## Launch a token shop in 5 minutes
+## What it is
 
-1. **Check the token is supported**:
-   ```bash
-   curl -s https://api.morapay.io/api/public/ramp/config \
-     | jq '.data.supportedOnrampTargets[] | select(.symbol=="YOURTICKER")'
-   ```
-   No result? Ask Morapay to list it first (the shop will run in Telegram fallback mode until then).
-2. **Click a Deploy button** (Vercel recommended) → it forks this repo.
-3. **Edit `shop.config.ts`** in your fork (start from `examples/milan.config.ts`):
-   token name, ticker, chainId, contract, decimals, accent colour, socials, Telegram desk link,
-   your Morapay referral code (`MP-XXXXXX`), and which countries/methods to show.
-4. **Add images** to `/public/brand/`: `logo.png` (512×512), `hero.jpg` (≤1080px wide).
-5. **Set env vars**: `MORAPAY_API_BASE=https://api.morapay.io`, `SHOP_ID=yourtoken`,
-   `NEXT_PUBLIC_SITE_URL=https://yourdomain.com`, `MORAPAY_REFERRAL_CODE=MP-XXXXXX`.
-6. **Deploy**, then open `/api/health`, which should show `tokenSupported: true`.
-7. **Test** with the minimum amount yourself before announcing. Use factual posts only (see Compliance).
+- Buyers pay with **mobile money or bank**; tokens settle to their wallet.
+- The browser **never** talks to `api.morapay.io` — only your Next.js `/api/*` routes do, with **HMAC-signed** merchant requests.
+- Branding, token, countries, and payment methods come from **`shop.config.ts`** + `/public/brand/*` + env vars.
 
-Or locally: `pnpm new-shop` to copy an example and prompt for fields.
+## Get Morapay merchant keys
 
-## Deploy
+1. Create a business on [Morapay](https://morapay.io) and complete onboarding.
+2. Dashboard → **Developers → API keys** → create a **TEST** or **LIVE** pair (`pk_*` + `sk_*`).
+3. Copy **public** key to `MORAPAY_MERCHANT_PUBLIC_KEY` and **secret** to `MORAPAY_MERCHANT_SECRET_KEY` (server env only).
+4. Set `MORAPAY_ENV=test` or `live` to match the key prefix.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/morapay-app/morapay-token-shop&env=MORAPAY_API_BASE,SHOP_ID,NEXT_PUBLIC_SITE_URL,MORAPAY_REFERRAL_CODE&envDescription=See%20.env.example&project-name=my-token-shop)
+Docs: [Authentication](https://docs.morapay.io/getting-started/authentication), [Merchant ramp](https://docs.morapay.io/api-reference/merchant-ramp).
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/morapay-app/morapay-token-shop)
+## Environment variables
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/morapay-app/morapay-token-shop)
+| Variable | Required | Purpose |
+|---|---|---|
+| `MORAPAY_MERCHANT_PUBLIC_KEY` | Yes | `pk_test_*` / `pk_live_*` |
+| `MORAPAY_MERCHANT_SECRET_KEY` | Yes | `sk_test_*` / `sk_live_*` (never expose) |
+| `MORAPAY_ENV` | Yes | `test` or `live` — must match keys |
+| `MORAPAY_API_BASE` | No | Default `https://api.morapay.io` |
+| `SHOP_ID` | Yes | Shop identifier for analytics |
+| `NEXT_PUBLIC_SITE_URL` | Yes | Canonical site URL |
+| `MORAPAY_REFERRAL_CODE` | No | `MP-XXXXXX` attribution override |
+| `FORCE_FALLBACK` | No | Telegram-only mode |
+| `MORAPAY_ALLOW_PUBLIC_FALLBACK` | No | **Off by default.** Enables legacy unsigned `/api/public/*` |
+| `TRUST_CLOUDFLARE_IP` | No | Use `CF-Connecting-IP` when behind Cloudflare |
 
-| Target | Notes |
-|---|---|
-| **Vercel** | Zero-config Next.js. Set env vars from `.env.example`. |
-| **Railway** | `Dockerfile` + `railway.json` (standalone output). `railway up` then set variables. |
-| **Cloudflare** | Install `@opennextjs/cloudflare` + `wrangler`, then `pnpm cf:deploy`. Geo header: `cf-ipcountry`. |
+See [`.env.example`](.env.example).
+
+## Launch a shop in 5 minutes
+
+1. **Fork / clone** this repo.
+2. **`pnpm new-shop`** or edit `shop.config.ts` (start from `examples/milan.config.ts` or `examples/amem.config.ts`).
+3. **Brand assets** in `/public/brand/`.
+4. **Set env vars** (merchant keys + `SHOP_ID` + `NEXT_PUBLIC_SITE_URL`).
+5. **Deploy** — open `/api/health` → expect `merchantSigning: true` and `tokenSupported: true` when your token is listed on the merchant ramp config.
+6. **Test** at minimum buy amount before announcing.
 
 ## Local development
 
 ```bash
 pnpm install
 cp .env.example .env.local
+# Add your pk_test_ / sk_test_ keys
 pnpm dev
 ```
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm smoke:live   # read-only Morapay checks — does not place orders
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm smoke:live   # read-only signed Morapay checks — does not place orders
 ```
+
+Without merchant keys, the buy widget shows a **setup screen** (no silent unsigned mode).
+
+## Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/morapay-app/morapay-token-shop&env=MORAPAY_MERCHANT_PUBLIC_KEY,MORAPAY_MERCHANT_SECRET_KEY,MORAPAY_ENV,SHOP_ID,NEXT_PUBLIC_SITE_URL&envDescription=See%20.env.example&project-name=my-token-shop)
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/morapay-app/morapay-token-shop)
+
+| Target | Notes |
+|---|---|
+| **Vercel** | Set merchant env vars from `.env.example`. |
+| **Railway** | `Dockerfile` + `railway.json`; healthcheck `/api/health`. |
+| **Cloudflare** | Set `TRUST_CLOUDFLARE_IP=true` for buyer IP attribution. |
+
+## How earnings work
+
+Orders are created via **`/api/v1/merchant/ramp/*`** signed with **your** merchant key. Morapay attributes volume and **merchant markup/fees** to your business (configured in the merchant portal). Unsigned public ramp calls do not attribute revenue to your business.
+
+## Going live
+
+1. Issue **live** keys (`pk_live_*` / `sk_live_*`).
+2. Set `MORAPAY_ENV=live`.
+3. Confirm token appears in `GET /api/v1/merchant/ramp/config` for your account.
+4. Run a real minimum buy yourself; monitor `/api/health` and order status.
+
+## Security
+
+- **Never** put `sk_*` in `NEXT_PUBLIC_*` or client code.
+- Rotate secret keys immediately if leaked; update Railway/Vercel env and redeploy.
+- Buyer IPs are forwarded on outbound Morapay calls (`X-Forwarded-For`, `X-Real-IP`) so ramp abuse keys on shoppers, not your host egress IP.
 
 ## What you edit for a new shop
 
 | Path | Purpose |
 |---|---|
-| `shop.config.ts` | Token, branding, countries, methods, sell toggle, Telegram, referral |
-| `public/brand/*` | `logo.png`, `hero.jpg`, `favicon.ico` |
-| Env vars | See `.env.example` |
-
-No other code changes required.
+| `shop.config.ts` | Token, branding, countries, methods, sell toggle, Telegram |
+| `public/brand/*` | Logo, hero, favicon |
+| Env vars | Merchant keys, `SHOP_ID`, site URL |
 
 ## Architecture
 
-- Next.js 15 App Router + TypeScript + Tailwind CSS v4 + zod
-- Browser never calls `api.morapay.io` — all traffic goes through `/app/api/*`
-- Config ∩ live ramp config drives which countries/methods are selectable
-- Fallback: Telegram desk deep-link when API is down, token unsupported, or `FORCE_FALLBACK=true`
-- Sell (offramp) is **off by default** (`sell.enabled: false`)
+- Next.js 15 App Router, TypeScript, Tailwind v4, zod
+- `lib/morapay/sign.ts` — HMAC v1 (`Morapay-Key`, `Morapay-Timestamp`, `Morapay-Signature`)
+- `lib/morapay/client.ts` — signed fetch + envelope parsing
+- Fallback: Telegram desk when token unsupported or `FORCE_FALLBACK=true`
 
 ## Default example
 
-MILAN (`examples/milan.config.ts`) — BNB Chain, GHS MoMo + bank, NGN bank. Sell disabled.
-
-## TODO(owner) placeholders
-
-Documented in the build brief (section 19). Scaffold uses:
-
-| Item | Placeholder |
-|---|---|
-| Telegram desk | `https://t.me/morapay` |
-| Referral code | unset — set `MORAPAY_REFERRAL_CODE` or `attribution.referralCode` |
-| Turnstile | optional via `TURNSTILE_*` env |
-| Legal entity | Terms / Privacy pages marked TODO(owner) |
-| Card / KES / etc. | config-ready, disabled until ramp supports them |
-| GRIOT example | `examples/griot.config.ts` needs real contract + branding |
+**MILAN** (`examples/milan.config.ts`) — BNB Chain, GHS MoMo + bank, NGN bank.  
+**AMEM** (`examples/amem.config.ts`) — reference production branding.
 
 ## Compliance
 
-No hype or “moon” copy. Risk disclaimer is always visible. Do not place paid ads until Morapay confirms BoG/SEC status.
+No investment hype. Risk disclaimer stays visible. Confirm regulatory status before paid ads.
 
 ## License
 

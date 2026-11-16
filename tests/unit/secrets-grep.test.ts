@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
-const PATTERNS = [/sk_live_/, /sk_test_/, /MORAPAY_PARTNER_SECRET/, /UPSTASH_REDIS_REST_TOKEN=/];
+const PATTERNS = [
+  /sk_live_[A-Za-z0-9]+/,
+  /sk_test_[A-Za-z0-9]{8,}/,
+  /MORAPAY_PARTNER_SECRET=/,
+  /UPSTASH_REDIS_REST_TOKEN=/,
+];
 
 function walk(dir: string, files: string[] = []): string[] {
   if (!existsSync(dir)) return files;

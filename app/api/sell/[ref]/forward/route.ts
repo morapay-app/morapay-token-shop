@@ -2,6 +2,7 @@ import { z } from "zod";
 import { hubForward } from "@/lib/morapay/ramp";
 import { getShopConfig } from "@/lib/shop-runtime";
 import { jsonOk, jsonErr } from "@/lib/api-response";
+import { clientIp } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function POST(
     }
     const { ref } = await ctx.params;
     const body = BodySchema.parse(await req.json());
-    const data = await hubForward(ref, body);
+    const data = await hubForward(ref, body, { buyerIp: clientIp(req.headers) });
     return jsonOk(data);
   } catch (err) {
     return jsonErr(err, 502);

@@ -41,6 +41,8 @@ export async function GET(req: Request) {
       countries,
       fallback: health.fallback,
       fallbackReason: health.reason,
+      setupRequired: health.setupRequired === true,
+      merchantSigning: health.merchantSigning,
       fees: shop.fees,
       telegram: {
         deskUrl: shop.telegram.deskUrl,

@@ -29,6 +29,9 @@ jobs:
       - run: pnpm build
         env:
           MORAPAY_API_BASE: https://api.morapay.io
+          MORAPAY_MERCHANT_PUBLIC_KEY: pk_test_ci_placeholder
+          MORAPAY_MERCHANT_SECRET_KEY: sk_test_ci_placeholder
+          MORAPAY_ENV: test
           SHOP_ID: theafricanmeme
           NEXT_PUBLIC_SITE_URL: https://token-shop-production-ecd0135d.up.railway.app
           FORCE_FALLBACK: "true"
@@ -50,12 +53,18 @@ jobs:
       - run: pnpm build
         env:
           MORAPAY_API_BASE: https://api.morapay.io
+          MORAPAY_MERCHANT_PUBLIC_KEY: pk_test_ci_placeholder
+          MORAPAY_MERCHANT_SECRET_KEY: sk_test_ci_placeholder
+          MORAPAY_ENV: test
           SHOP_ID: theafricanmeme
           NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
           FORCE_FALLBACK: "true"
       - run: pnpm test:e2e
         env:
           MORAPAY_API_BASE: https://api.morapay.io
+          MORAPAY_MERCHANT_PUBLIC_KEY: pk_test_ci_placeholder
+          MORAPAY_MERCHANT_SECRET_KEY: sk_test_ci_placeholder
+          MORAPAY_ENV: test
           SHOP_ID: theafricanmeme
           NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
           FORCE_FALLBACK: "true"

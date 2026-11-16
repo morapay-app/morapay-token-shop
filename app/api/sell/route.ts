@@ -61,13 +61,17 @@ export async function POST(req: Request) {
       return jsonErr({ message: addr.reason, status: 400 }, 400);
     }
 
-    await getQuote({
-      action: "OFFRAMP",
-      inputAmount: body.tokenAmount,
-      inputCurrency: shop.token.ticker,
-      outputCurrency: body.currency,
-      chain: String(shop.token.chainId),
-    });
+    const morapayCtx = { buyerIp: ip };
+    await getQuote(
+      {
+        action: "OFFRAMP",
+        inputAmount: body.tokenAmount,
+        inputCurrency: shop.token.ticker,
+        outputCurrency: body.currency,
+        chain: String(shop.token.chainId),
+      },
+      morapayCtx,
+    );
 
     const cookieStore = await cookies();
     const referral = resolveReferral({
@@ -76,7 +80,8 @@ export async function POST(req: Request) {
       config: shop.attribution.referralCode,
     });
 
-    const initiated = await initiateOfframp({
+    const initiated = await initiateOfframp(
+      {
       currency: body.currency.toLowerCase(),
       token_amount: body.tokenAmount,
       wallet_address: addr.normalized,
@@ -89,7 +94,9 @@ export async function POST(req: Request) {
       source_token_address: shop.token.contract,
       referral_code: referral,
       turnstileToken: body.turnstileToken,
-    });
+      },
+      morapayCtx,
+    );
 
     const ref = String(
       initiated.merchantReference ?? initiated.merchant_reference ?? "",
@@ -98,14 +105,16 @@ export async function POST(req: Request) {
       return jsonErr({ message: "Sell order missing reference.", status: 502 }, 502);
     }
 
-    const confirmed = await confirmOfframp(ref, {
-      wallet_address: addr.normalized,
-    });
+    const confirmed = await confirmOfframp(
+      ref,
+      { wallet_address: addr.normalized },
+      morapayCtx,
+    );
 
     const depositAddress = String(
       confirmed.depositAddress ??
         confirmed.deposit_address ??
-        confirmed.address ??
+        (confirmed.deposit as { address?: string } | undefined)?.address ??
         "",
     );
 

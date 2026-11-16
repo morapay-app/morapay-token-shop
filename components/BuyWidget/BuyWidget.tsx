@@ -11,6 +11,7 @@ import { OtpStep } from "./OtpStep";
 import { BankDepositStep } from "./BankDepositStep";
 import { StatusStep } from "./StatusStep";
 import { TelegramFallback } from "@/components/TelegramFallback";
+import { SetupRequired } from "@/components/SetupRequired";
 import { track } from "@/lib/analytics";
 import { WAIT_TOTAL_MS } from "@/lib/wait-phases";
 
@@ -42,6 +43,9 @@ type ShopApiConfig = {
   detectedCountry: string;
   detectedNote?: string;
   fallback: boolean;
+  setupRequired?: boolean;
+  fallbackReason?: string;
+  merchantSigning?: boolean;
   telegram: { deskUrl: string };
   fees: { showFeeLine: boolean; note?: string };
 };
@@ -58,6 +62,8 @@ export function BuyWidget() {
   const [config, setConfig] = useState<ShopApiConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [geoNote, setGeoNote] = useState<string | null>(null);
+  const [setupRequired, setSetupRequired] = useState(false);
+  const [setupReason, setSetupReason] = useState<string | undefined>();
   const [state, dispatch] = useReducer(
     buyReducer,
     initialBuyState("GH", "GHS"),
@@ -81,16 +87,19 @@ export function BuyWidget() {
       .then((data) => {
         setConfig(data);
         setGeoNote(data.detectedNote ?? null);
+        setSetupRequired(data.setupRequired === true);
+        setSetupReason(data.fallbackReason);
         const c =
           data.countries.find((x) => x.code === data.detectedCountry) ??
           data.countries.find((x) => x.code === data.defaultCountry)!;
+        const useFallback = data.fallback && !data.setupRequired;
         dispatch({
           type: "HYDRATE",
           payload: {
             country: c.code,
             currency: c.currency,
-            fallback: data.fallback,
-            step: data.fallback ? "fallback" : "amount",
+            fallback: useFallback,
+            step: useFallback ? "fallback" : "amount",
           },
         });
       })
@@ -342,6 +351,14 @@ export function BuyWidget() {
       <div className="card p-6 animate-pulse">
         <div className="h-8 bg-[var(--mp-subcard)] rounded-xl mb-4" />
         <div className="h-12 bg-[var(--mp-subcard)] rounded-xl" />
+      </div>
+    );
+  }
+
+  if (setupRequired) {
+    return (
+      <div className="card p-6 w-full max-w-[480px] mx-auto">
+        <SetupRequired reason={setupReason} />
       </div>
     );
   }
