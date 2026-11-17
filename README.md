@@ -108,7 +108,21 @@ Orders are created via **`/api/v1/merchant/ramp/*`** signed with **your** mercha
 ## Default example
 
 **MILAN** (`examples/milan.config.ts`) — BNB Chain, GHS MoMo + bank, NGN bank.  
-**AMEM** (`examples/amem.config.ts`) — reference production branding.
+**AMEM** (`examples/amem.config.ts`) — reference production branding.  
+**WikiCat** (`examples/wikicat.config.ts`) — WKC on BNB Chain; NGN bank + Ghana MoMo; buy and sell enabled.
+
+### WikiCat demo deploy
+
+For the SMC partner shop, set the same merchant env vars as any other shop and:
+
+```bash
+SHOP_ID=wikicat
+NEXT_PUBLIC_SITE_URL=https://your-wikicat-host.example
+```
+
+Brand assets live under `public/brand/wikicat/`. For a dedicated deploy, copy `public/brand/wikicat/favicon.ico` to `public/brand/favicon.ico` before build (layout metadata uses the root favicon path).
+
+On **Railway**, add a new service from this repo with `SHOP_ID=wikicat`, your `pk_*` / `sk_*` keys, `MORAPAY_ENV`, and `NEXT_PUBLIC_SITE_URL` for the public URL.
 
 ## Compliance
 

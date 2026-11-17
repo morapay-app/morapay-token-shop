@@ -5,6 +5,7 @@ import {
   type ShopConfigInput,
 } from "@/config/schema";
 import milan from "@/examples/milan.config";
+import wikicat from "@/examples/wikicat.config";
 
 function base(): ShopConfigInput {
   return structuredClone(milan) as ShopConfigInput;
@@ -46,5 +47,14 @@ describe("config schema", () => {
 
   it("MILAN example has clean copy", () => {
     expect(lintShopConfig(milan)).toEqual([]);
+  });
+
+  it("accepts the WikiCat example", () => {
+    const r = ShopConfigSchema.safeParse(wikicat);
+    expect(r.success).toBe(true);
+  });
+
+  it("WikiCat example has clean copy", () => {
+    expect(lintShopConfig(wikicat)).toEqual([]);
   });
 });
