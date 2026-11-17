@@ -40,7 +40,7 @@ export function WikiCatHome({
         </h1>
         <p className="wikicat-tagline">{headline}</p>
         {subline ? <p className="wikicat-subline">{subline}</p> : null}
-        <div className="wikicat-buy-shell">
+        <div className="wikicat-buy-shell morapay-widget-surface">
           <BuyWidget />
         </div>
       </div>

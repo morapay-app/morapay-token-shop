@@ -568,7 +568,6 @@ body {
   --mp-canvas: #ebe8ff;
   --brand-accent: var(--wikicat-violet);
   --brand-accent-on-light: var(--wikicat-violet);
-  --brand-accent-text: #ffffff;
   --brand-hero-bg: var(--wikicat-violet-soft);
 }
 
@@ -681,6 +680,52 @@ body {
 
 .shop-wikicat .wikicat-buy-shell {
   margin-top: 0.75rem;
+}
+
+/*
+ * Morapay buy/sell widget on the WikiCat hero (sky background): reset inherited
+ * marketing colors so labels, inputs, and notices stay plum/cream like other shops.
+ */
+.shop-wikicat .morapay-widget-surface {
+  color: var(--mp-text);
+  text-align: left;
+  --mp-text: #2b0a30;
+  --mp-text-muted: #5c574c;
+  --mp-card: #f8f6ec;
+  --mp-subcard: #edebdf;
+  --mp-hero: #ffffff;
+  --mp-divider: #dad6c6;
+  --brand-accent-text: #0a0a0a;
+}
+
+.shop-wikicat .morapay-widget-surface .card {
+  color: var(--mp-text);
+  background: var(--mp-card);
+}
+
+.shop-wikicat .morapay-widget-surface .card .font-heading {
+  color: var(--mp-text);
+}
+
+.shop-wikicat .morapay-widget-surface .card .label {
+  color: var(--mp-text);
+}
+
+.shop-wikicat .morapay-widget-surface .card .btn-ghost {
+  color: var(--mp-text);
+}
+
+.shop-wikicat .morapay-widget-surface .card .field {
+  color: var(--mp-text);
+  background: var(--mp-hero);
+}
+
+.shop-wikicat .morapay-widget-surface .card .receipt-card {
+  color: var(--receipt-text);
+}
+
+.shop-wikicat .morapay-widget-surface .mp-setup-notice code {
+  color: var(--mp-text);
 }
 
 .shop-wikicat .wikicat-features {
