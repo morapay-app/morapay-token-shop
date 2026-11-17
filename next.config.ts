@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import { resolveBrandFaviconPath } from "./lib/brand-icon";
+import shopConfig from "./shop.config";
 
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
@@ -28,11 +30,19 @@ const securityHeaders = [
   },
 ];
 
+const brandFavicon = resolveBrandFaviconPath(
+  shopConfig.shopId,
+  shopConfig.brand.favicon,
+);
+
 const nextConfig: NextConfig = {
   output: "standalone",
   // Inline SHOP_ID into server + client bundles so shop.config.ts picks the same shop everywhere.
   env: { SHOP_ID: process.env.SHOP_ID ?? "" },
   poweredByHeader: false,
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: brandFavicon }];
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

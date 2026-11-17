@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { shopConfig } from "@/shop.config";
+import { resolveBrandFaviconPath } from "@/lib/brand-icon";
 import { accentForLightText } from "@/lib/contrast";
 import "./globals.css";
 
@@ -57,6 +58,11 @@ const cultureBody = localFont({
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || shopConfig.siteUrl;
 
+const brandFavicon = resolveBrandFaviconPath(
+  shopConfig.shopId,
+  shopConfig.brand.favicon,
+);
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: `Buy $${shopConfig.token.ticker} with Mobile Money or Bank | ${shopConfig.token.name}`,
@@ -75,7 +81,9 @@ export const metadata: Metadata = {
     description: shopConfig.token.description,
   },
   icons: {
-    icon: "/brand/favicon.ico",
+    icon: brandFavicon,
+    shortcut: brandFavicon,
+    apple: brandFavicon,
   },
 };
 
