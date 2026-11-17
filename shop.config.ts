@@ -9,12 +9,14 @@
 import amemConfig from "./examples/amem.config";
 import griotConfig from "./examples/griot.config";
 import milanConfig from "./examples/milan.config";
+import wikicatConfig from "./examples/wikicat.config";
 import { ShopConfigSchema, type ShopConfig } from "./config/schema";
 
 const SHOPS: Record<string, unknown> = {
   [amemConfig.shopId]: amemConfig,
   [griotConfig.shopId]: griotConfig,
   [milanConfig.shopId]: milanConfig,
+  [wikicatConfig.shopId]: wikicatConfig,
 };
 
 const selected = SHOPS[process.env.SHOP_ID ?? ""] ?? milanConfig;
