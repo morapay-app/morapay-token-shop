@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { resolveHomeLayoutVariant } from "@/lib/home-layout";
 import { shopConfig } from "@/shop.config";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -10,10 +11,12 @@ export default function SellPage() {
     redirect("/");
   }
 
+  const wikiCat = resolveHomeLayoutVariant(shopConfig) === "wikicat";
+
   return (
-    <main>
+    <main className={wikiCat ? "shop-wikicat" : undefined}>
       <Header />
-      <section className="w-full max-w-[480px] mx-auto px-4 py-6">
+      <section className="morapay-widget-surface w-full max-w-[480px] mx-auto px-4 py-6">
         <h1 className="font-heading text-3xl font-bold mb-4">
           Sell ${shopConfig.token.ticker}
         </h1>

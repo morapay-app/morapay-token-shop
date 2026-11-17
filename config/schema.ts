@@ -78,6 +78,10 @@ export const ShopConfigSchema = z
       accentText: z.string().optional(),
       heroBg: z.string().optional(),
       heroImage: z.string().optional(),
+      /** Public path to favicon (e.g. /brand/wikicat/favicon.ico). Omit to auto-detect public/brand/<shopId>/favicon.ico. */
+      favicon: z.string().regex(/^\//).optional(),
+      /** Home shell: classic hero, AMEM-style culture stage, or WikiCat property theme. */
+      layoutVariant: z.enum(["default", "culture", "wikicat"]).optional(),
       overridePrimary: z.boolean().default(false),
       headline: z.string().default("Buy ${ticker} with mobile money or bank"),
       subline: z.string().optional(),

@@ -2,6 +2,8 @@ import type { CSSProperties } from "react";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { shopConfig } from "@/shop.config";
+import { resolveBrandFaviconPath } from "@/lib/brand-icon";
+import { resolveHomeLayoutVariant } from "@/lib/home-layout";
 import { accentForLightText } from "@/lib/contrast";
 import "./globals.css";
 
@@ -54,8 +56,26 @@ const cultureBody = localFont({
   display: "swap",
 });
 
+/** Wiki Cat display face (Alone — from wikicatcoin.com). */
+const wikicatDisplay = localFont({
+  src: [
+    {
+      path: "./fonts/wikicat/alone-earth.otf",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+  variable: "--font-wikicat-display",
+  display: "swap",
+});
+
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || shopConfig.siteUrl;
+
+const brandFavicon = resolveBrandFaviconPath(
+  shopConfig.shopId,
+  shopConfig.brand.favicon,
+);
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -75,12 +95,17 @@ export const metadata: Metadata = {
     description: shopConfig.token.description,
   },
   icons: {
-    icon: "/brand/favicon.ico",
+    icon: brandFavicon,
+    shortcut: brandFavicon,
+    apple: brandFavicon,
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: shopConfig.culture?.stageBg ?? shopConfig.brand.heroBg ?? "#ffffff",
+  themeColor:
+    resolveHomeLayoutVariant(shopConfig) === "wikicat"
+      ? (shopConfig.brand.heroBg ?? "#9DE7F1")
+      : (shopConfig.culture?.stageBg ?? shopConfig.brand.heroBg ?? "#ffffff"),
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -100,7 +125,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${manrope.variable} ${instrument.variable} ${cultureDisplay.variable} ${cultureBody.variable} antialiased`}
+        className={`${manrope.variable} ${instrument.variable} ${cultureDisplay.variable} ${cultureBody.variable} ${wikicatDisplay.variable} antialiased`}
         style={
           {
             "--brand-accent": accent,
