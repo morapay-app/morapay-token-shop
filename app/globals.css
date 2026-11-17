@@ -556,6 +556,228 @@ body {
   transform: translateY(-2px);
 }
 
+/* ---- Wiki Cat property theme (wikicatcoin.com palette) ---- */
+.shop-wikicat {
+  --wikicat-violet: #6159b5;
+  --wikicat-violet-soft: #a89fff;
+  --wikicat-yellow: #fde047;
+  --wikicat-mint: #bcf698;
+  --wikicat-sky: #9de7f1;
+  --wikicat-pink: #feb6f5;
+  --wikicat-ink: #0a0a0a;
+  --mp-canvas: #ebe8ff;
+  --brand-accent: var(--wikicat-violet);
+  --brand-accent-on-light: var(--wikicat-violet);
+  --brand-accent-text: #ffffff;
+  --brand-hero-bg: var(--wikicat-violet-soft);
+}
+
+.shop-wikicat .wikicat-hero {
+  background-color: var(--wikicat-sky);
+  background-image: url("/brand/wikicat/clouds.png");
+  background-size: cover;
+  background-position: center top;
+  color: var(--wikicat-ink);
+  padding-bottom: 2.5rem;
+}
+
+.shop-wikicat .wikicat-hero-inner {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 0 1rem 1.5rem;
+  text-align: center;
+}
+
+.shop-wikicat .wikicat-header {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1.25rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.shop-wikicat .wikicat-header .font-heading {
+  font-family: var(--font-wikicat-display), var(--font-manrope), system-ui,
+    sans-serif;
+  font-weight: 800;
+  color: var(--wikicat-violet);
+}
+
+.shop-wikicat .wikicat-header-ticker {
+  color: color-mix(in srgb, var(--wikicat-violet) 75%, var(--wikicat-ink));
+  font-weight: 700;
+}
+
+.shop-wikicat .wikicat-eyebrow {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-pill);
+  background: var(--wikicat-yellow);
+  border: 1px solid var(--wikicat-ink);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.shop-wikicat .wikicat-mascot-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.shop-wikicat .wikicat-mascot {
+  width: min(200px, 45vw);
+  height: auto;
+  filter: drop-shadow(0 10px 18px rgb(0 0 0 / 15%));
+}
+
+.shop-wikicat .wikicat-coins {
+  position: absolute;
+  right: max(0px, calc(50% - 148px));
+  bottom: -8px;
+  width: 84px;
+  height: auto;
+}
+
+.shop-wikicat .wikicat-headline {
+  margin: 0.25rem 0 0.5rem;
+  font-family: var(--font-wikicat-display), var(--font-manrope), system-ui,
+    sans-serif;
+  font-size: clamp(2.75rem, 11vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.shop-wikicat .wikicat-headline-wiki {
+  color: var(--wikicat-yellow);
+  -webkit-text-stroke: 1.25px var(--wikicat-ink);
+}
+
+.shop-wikicat .wikicat-headline-cat {
+  color: var(--wikicat-violet-soft);
+  -webkit-text-stroke: 1.25px var(--wikicat-ink);
+}
+
+.shop-wikicat .wikicat-tagline {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin: 0 0 0.35rem;
+}
+
+.shop-wikicat .wikicat-subline {
+  margin: 0 auto 1rem;
+  max-width: 28rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--wikicat-ink) 78%, white);
+}
+
+.shop-wikicat .wikicat-buy-shell {
+  margin-top: 0.75rem;
+}
+
+.shop-wikicat .wikicat-features {
+  background-image: url("/brand/wikicat/pattern_bg.png");
+  background-size: cover;
+  background-position: center;
+  padding: 2.25rem 1rem 2.75rem;
+  border-top: 3px solid var(--wikicat-violet);
+}
+
+.shop-wikicat .wikicat-features-grid {
+  display: grid;
+  gap: 1rem;
+  max-width: 72rem;
+  margin: 0 auto 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .shop-wikicat .wikicat-features-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.shop-wikicat .wikicat-feature {
+  border: 2px solid var(--wikicat-ink);
+  border-radius: 1.25rem;
+  padding: 1.1rem 1.15rem;
+  box-shadow: 4px 4px 0 var(--wikicat-ink);
+}
+
+.shop-wikicat .wikicat-feature h2 {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-wikicat-display), var(--font-manrope), system-ui,
+    sans-serif;
+  font-size: 1.35rem;
+}
+
+.shop-wikicat .wikicat-feature p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.shop-wikicat .wikicat-feature--violet {
+  background: var(--wikicat-violet-soft);
+}
+
+.shop-wikicat .wikicat-feature--mint {
+  background: var(--wikicat-mint);
+}
+
+.shop-wikicat .wikicat-feature--sky {
+  background: var(--wikicat-sky);
+}
+
+.shop-wikicat .wikicat-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.shop-wikicat .wikicat-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--wikicat-ink);
+  background: var(--wikicat-yellow);
+  color: var(--wikicat-ink);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 3px 3px 0 var(--wikicat-ink);
+}
+
+.shop-wikicat .wikicat-cta--ghost {
+  background: #fff;
+}
+
+.shop-wikicat .wikicat-cta:hover {
+  transform: translateY(-2px);
+}
+
+.shop-wikicat .wikicat-features + section,
+.shop-wikicat .wikicat-features ~ section {
+  max-width: 72rem;
+}
+
+.shop-wikicat .wikicat-features ~ section h2 {
+  color: var(--wikicat-violet);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

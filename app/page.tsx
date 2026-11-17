@@ -11,6 +11,8 @@ import {
   CultureRail,
   CultureStageBrand,
 } from "@/components/CultureRails";
+import { WikiCatHome } from "@/components/themes/WikiCatHome";
+import { resolveHomeLayoutVariant } from "@/lib/home-layout";
 import { shopConfig } from "@/shop.config";
 
 export default function HomePage() {
@@ -18,8 +20,11 @@ export default function HomePage() {
     "${ticker}",
     `$${shopConfig.token.ticker}`,
   );
+  const layoutVariant = resolveHomeLayoutVariant(shopConfig);
   const culture =
-    shopConfig.culture?.enabled === false ? undefined : shopConfig.culture;
+    layoutVariant === "culture" && shopConfig.culture?.enabled !== false
+      ? shopConfig.culture
+      : undefined;
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -51,8 +56,18 @@ export default function HomePage() {
   };
 
   return (
-    <main className={culture ? "shop-with-culture" : undefined}>
-      {culture ? (
+    <main
+      className={
+        layoutVariant === "wikicat"
+          ? "shop-wikicat"
+          : culture
+            ? "shop-with-culture"
+            : undefined
+      }
+    >
+      {layoutVariant === "wikicat" ? (
+        <WikiCatHome headline={headline} subline={shopConfig.brand.subline} />
+      ) : culture ? (
         <section
           className="culture-stage"
           style={

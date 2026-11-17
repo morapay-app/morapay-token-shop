@@ -120,7 +120,7 @@ SHOP_ID=wikicat
 NEXT_PUBLIC_SITE_URL=https://your-wikicat-host.example
 ```
 
-Brand assets live under `public/brand/wikicat/`. With `SHOP_ID=wikicat`, the build picks `public/brand/wikicat/favicon.ico` automatically (or set `brand.favicon` in the shop config).
+Brand assets live under `public/brand/wikicat/`. With `SHOP_ID=wikicat`, the build picks `public/brand/wikicat/favicon.ico` automatically (or set `brand.favicon` in the shop config). WikiCat uses `brand.layoutVariant: "wikicat"` for its own property theme (not the culture-stage layout used by AMEM).
 
 On **Railway**, add a new service from this repo with `SHOP_ID=wikicat`, your `pk_*` / `sk_*` keys, `MORAPAY_ENV`, and `NEXT_PUBLIC_SITE_URL` for the public URL.
 

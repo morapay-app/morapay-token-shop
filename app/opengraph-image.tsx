@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { resolveHomeLayoutVariant } from "@/lib/home-layout";
 import { shopConfig } from "@/shop.config";
 
 export const runtime = "nodejs";
@@ -8,8 +9,13 @@ export const contentType = "image/png";
 export default function OgImage() {
   const ticker = `$${shopConfig.token.ticker}`;
   const accent = shopConfig.brand.accent;
-  const stageBg = shopConfig.culture?.stageBg ?? "#0A0A0A";
-  const stageText = shopConfig.culture?.stageText ?? "#F5F1E6";
+  const wikicat = resolveHomeLayoutVariant(shopConfig) === "wikicat";
+  const stageBg = wikicat
+    ? "#9DE7F1"
+    : (shopConfig.culture?.stageBg ?? "#0A0A0A");
+  const stageText = wikicat
+    ? "#0A0A0A"
+    : (shopConfig.culture?.stageText ?? "#F5F1E6");
 
   return new ImageResponse(
     (
