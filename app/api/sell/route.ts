@@ -5,6 +5,7 @@ import {
   initiateOfframp,
   confirmOfframp,
   parseOfframpDepositInfo,
+  xrplOfframpDepositError,
 } from "@/lib/morapay/ramp";
 import { getShopConfig, getHealth } from "@/lib/shop-runtime";
 import { jsonOk, jsonErr } from "@/lib/api-response";
@@ -115,6 +116,14 @@ export async function POST(req: Request) {
 
     const { depositAddress, depositDestinationTag } =
       parseOfframpDepositInfo(confirmed);
+
+    const xrplDepositErr = xrplOfframpDepositError(shop.token.chainId, {
+      depositAddress,
+      depositDestinationTag,
+    });
+    if (xrplDepositErr) {
+      return jsonErr({ message: xrplDepositErr, status: 502 }, 502);
+    }
 
     // Safety: refuse if deposit address equals token contract
     if (

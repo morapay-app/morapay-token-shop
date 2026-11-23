@@ -1,9 +1,14 @@
 import type { ShopConfigInput } from "@/config/schema";
 
+const resolvedSiteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+  "https://token-shop-production-ecd0135d.up.railway.app";
+
 /** Native XRP on the XRP Ledger — chainId 144, Morapay contract id `xrp`. */
 const xrpConfig = {
   shopId: "xrp",
-  siteUrl: "https://example.com",
+  /** Runtime canonical URL also comes from `NEXT_PUBLIC_SITE_URL` in layout/sitemap. */
+  siteUrl: resolvedSiteUrl,
   token: {
     name: "XRP",
     ticker: "XRP",

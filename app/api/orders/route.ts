@@ -15,7 +15,8 @@ import {
   validateWalletAddress,
   walletStorageKey,
 } from "@/lib/validate/address";
-import { validateDestinationTag } from "@/lib/validate/destination-tag";
+import { resolvePayoutDestinationTag } from "@/lib/validate/destination-tag";
+import { merchantCoreTokenAddress } from "@/lib/morapay/core-token";
 import { parsePhoneForCountry, maskPhone } from "@/lib/validate/phone";
 import { REFERRAL_COOKIE, resolveReferral } from "@/lib/referral";
 
@@ -71,7 +72,10 @@ export async function POST(req: Request) {
       return jsonErr({ message: addr.reason, status: 400 }, 400);
     }
 
-    const tag = validateDestinationTag(body.payoutDestinationTag);
+    const tag = resolvePayoutDestinationTag(
+      body.payoutDestinationTag,
+      addr.ok ? addr.embeddedDestinationTag : undefined,
+    );
     if (!tag.ok) {
       return jsonErr({ message: tag.reason, status: 400 }, 400);
     }
@@ -113,6 +117,10 @@ export async function POST(req: Request) {
         tokenAddress: shop.token.contract,
       },
       morapayCtx,
+    );
+    const coreTargetTokenAddress = merchantCoreTokenAddress(
+      shop.token.chainId,
+      shop.token.contract,
     );
 
     const amountNum = Number(body.fiatAmount);
@@ -199,7 +207,9 @@ export async function POST(req: Request) {
       client_channel: "browser" as const,
       target_chain_id: String(shop.token.chainId),
       target_token_symbol: shop.token.ticker,
-      target_token_address: shop.token.contract,
+      ...(coreTargetTokenAddress
+        ? { target_token_address: coreTargetTokenAddress }
+        : {}),
       quoted_to_amount: quote.output.amount,
       phone_number: phoneLocal,
       network_provider: body.networkProvider ?? method.networkProvider,

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { classicAddressToXAddress } from "ripple-address-codec";
 import {
+  classicAddressToXAddress,
+  encodeAccountID,
+  decodeAccountID,
+} from "ripple-address-codec";
+import {
+  parseXrplWalletInput,
   validateWalletAddress,
   walletAddressesEqual,
   walletStorageKey,
@@ -38,6 +43,26 @@ describe("address validation", () => {
     expect(main.ok).toBe(true);
     expect(validateWalletAddress(xTest, 144, "xrp").ok).toBe(false);
     expect(validateWalletAddress("xrp", 144, "xrp").ok).toBe(false);
+  });
+
+  it("extracts embedded tag from X-address", () => {
+    const classic = "rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv";
+    const tagged = classicAddressToXAddress(classic, 12345, false);
+    const parsed = parseXrplWalletInput(tagged);
+    expect(parsed?.classicAddress).toBe(classic);
+    expect(parsed?.embeddedDestinationTag).toBe(12345);
+    const v = validateWalletAddress(tagged, 144, "xrp");
+    expect(v.ok).toBe(true);
+    if (v.ok) {
+      expect(v.normalized).toBe(classic);
+      expect(v.embeddedDestinationTag).toBe(12345);
+    }
+  });
+
+  it("normalizes both sides in walletAddressesEqual", () => {
+    const classic = "rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv";
+    const alt = encodeAccountID(decodeAccountID(classic));
+    expect(walletAddressesEqual(classic, alt, 144)).toBe(true);
   });
 
   it("preserves XRPL case for storage keys", () => {

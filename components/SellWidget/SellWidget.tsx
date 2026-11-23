@@ -62,6 +62,16 @@ export function SellWidget() {
         setError("Unsafe deposit address. Do not send tokens.");
         return;
       }
+      if (
+        isXrpl &&
+        (j.data.depositDestinationTag == null ||
+          String(j.data.depositDestinationTag).trim() === "")
+      ) {
+        setError(
+          "Missing deposit destination tag. Do not send XRP — contact support with your order reference.",
+        );
+        return;
+      }
       setDeposit({
         ref: j.data.ref,
         depositAddress: j.data.depositAddress,
@@ -74,9 +84,19 @@ export function SellWidget() {
     }
   }
 
-  const tagRequired = isXrpl && deposit?.depositDestinationTag != null;
+  const tagRequired = isXrpl;
 
   if (deposit) {
+    if (tagRequired && deposit.depositDestinationTag == null) {
+      return (
+        <div className="card p-5 space-y-4" role="alert">
+          <p className="text-sm text-[var(--mp-warning-text)]">
+            Missing deposit destination tag. Do not send XRP — contact support
+            with ref {deposit.ref}.
+          </p>
+        </div>
+      );
+    }
     const qrValue =
       tagRequired && deposit.depositDestinationTag != null
         ? `${deposit.depositAddress}?dt=${deposit.depositDestinationTag}`

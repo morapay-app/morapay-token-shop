@@ -27,7 +27,21 @@ describe("XRPL ramp payloads", () => {
     });
     expect(payload.payoutDestinationTag).toBe(998877);
     expect(payload.targetChainId).toBe("144");
-    expect(payload.targetTokenAddress).toBe("xrp");
+    expect(payload.targetTokenAddress).toBeUndefined();
+  });
+
+  it("omits targetTokenAddress for native XRP", () => {
+    const payload = buildInitiateOnrampPayload({
+      currency: "ngn",
+      fiat_amount: "5000",
+      payout_wallet_address: "rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv",
+      wallet_address: "rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv",
+      client_channel: "browser",
+      target_chain_id: "144",
+      target_token_symbol: "XRP",
+      quoted_to_amount: "10",
+    });
+    expect(payload.targetTokenAddress).toBeUndefined();
   });
 
   it("omits payoutDestinationTag when absent", () => {
@@ -62,10 +76,12 @@ describe("XRPL ramp payloads", () => {
     expect(isTokenSupported(cfg, 56, "xrp")).toBe(false);
   });
 
-  it("parseOfframpDepositInfo reads deposit tag fields", () => {
+  it("parseOfframpDepositInfo prefers deposit.destinationTag", () => {
     const info = parseOfframpDepositInfo({
-      depositAddress: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
-      depositDestinationTag: 424242,
+      deposit: {
+        address: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
+        destinationTag: 424242,
+      },
     });
     expect(info.depositAddress).toContain("rN7n");
     expect(info.depositDestinationTag).toBe(424242);

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { validateDestinationTag } from "@/lib/validate/destination-tag";
+import {
+  resolvePayoutDestinationTag,
+  validateDestinationTag,
+} from "@/lib/validate/destination-tag";
 
 describe("destination tag validation", () => {
   it("allows empty optional tag", () => {
@@ -14,6 +17,17 @@ describe("destination tag validation", () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value).toBe(123456);
     expect(validateDestinationTag("4294967295").ok).toBe(true);
+  });
+
+  it("resolvePayoutDestinationTag merges embedded tag", () => {
+    const r = resolvePayoutDestinationTag("", 4242);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBe(4242);
+  });
+
+  it("resolvePayoutDestinationTag rejects mismatch", () => {
+    const r = resolvePayoutDestinationTag("1", 4242);
+    expect(r.ok).toBe(false);
   });
 
   it("rejects non-numeric and out-of-range", () => {
