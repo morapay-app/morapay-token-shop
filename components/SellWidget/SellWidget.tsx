@@ -4,6 +4,7 @@ import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { shopConfig } from "@/shop.config";
 import { validateWalletAddress } from "@/lib/validate/address";
+import { getChain } from "@/config/chains";
 
 /**
  * Sell flow — only mounted when config.sell.enabled.
@@ -18,9 +19,12 @@ export function SellWidget() {
   const [deposit, setDeposit] = useState<{
     ref: string;
     depositAddress: string;
+    depositDestinationTag?: string | number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const chain = getChain(shopConfig.token.chainId);
+  const isXrpl = chain?.kind === "xrpl";
 
   async function submit() {
     setError(null);
@@ -58,7 +62,21 @@ export function SellWidget() {
         setError("Unsafe deposit address. Do not send tokens.");
         return;
       }
-      setDeposit({ ref: j.data.ref, depositAddress: j.data.depositAddress });
+      if (
+        isXrpl &&
+        (j.data.depositDestinationTag == null ||
+          String(j.data.depositDestinationTag).trim() === "")
+      ) {
+        setError(
+          "Missing deposit destination tag. Do not send XRP — contact support with your order reference.",
+        );
+        return;
+      }
+      setDeposit({
+        ref: j.data.ref,
+        depositAddress: j.data.depositAddress,
+        depositDestinationTag: j.data.depositDestinationTag,
+      });
     } catch {
       setError("Could not start sell order.");
     } finally {
@@ -66,29 +84,86 @@ export function SellWidget() {
     }
   }
 
+  const tagRequired = isXrpl;
+
   if (deposit) {
+    if (tagRequired && deposit.depositDestinationTag == null) {
+      return (
+        <div className="card p-5 space-y-4" role="alert">
+          <p className="text-sm text-[var(--mp-warning-text)]">
+            Missing deposit destination tag. Do not send XRP — contact support
+            with ref {deposit.ref}.
+          </p>
+        </div>
+      );
+    }
+    const qrValue =
+      tagRequired && deposit.depositDestinationTag != null
+        ? `${deposit.depositAddress}?dt=${deposit.depositDestinationTag}`
+        : deposit.depositAddress;
+
     return (
       <div className="card p-5 space-y-4">
         <h2 className="font-heading text-xl font-bold">Send tokens</h2>
         <p className="text-sm text-[var(--mp-text-muted)]">
-          Send exactly {amount} ${shopConfig.token.ticker} to this deposit
-          address within 5 minutes.
+          Send exactly {amount} ${shopConfig.token.ticker} to the address below
+          within 5 minutes.
         </p>
+        {tagRequired && (
+          <div
+            className="rounded-2xl border-2 border-[var(--mp-warning-text)] bg-[var(--mp-warning-bg)] p-4 text-sm"
+            role="alert"
+          >
+            <p className="font-semibold text-[var(--mp-warning-text)]">
+              Include the destination tag
+            </p>
+            <p className="mt-1">
+              You must send with destination tag{" "}
+              <span className="font-mono font-bold">
+                {String(deposit.depositDestinationTag)}
+              </span>
+              . Sending without this tag can mean lost funds.
+            </p>
+          </div>
+        )}
         <div className="flex justify-center">
-          <QRCodeSVG value={deposit.depositAddress} size={160} />
+          <QRCodeSVG value={qrValue} size={160} />
         </div>
-        <p className="font-mono text-xs break-all subcard p-3">
-          {deposit.depositAddress}
-        </p>
-        <button
-          type="button"
-          className="btn-ghost w-full"
-          onClick={() =>
-            void navigator.clipboard.writeText(deposit.depositAddress)
-          }
-        >
-          Copy address
-        </button>
+        <div className="space-y-2">
+          <p className="label mb-0">Deposit address</p>
+          <p className="font-mono text-xs break-all subcard p-3">
+            {deposit.depositAddress}
+          </p>
+          <button
+            type="button"
+            className="btn-ghost w-full"
+            onClick={() =>
+              void navigator.clipboard.writeText(deposit.depositAddress)
+            }
+          >
+            Copy address
+          </button>
+        </div>
+        {deposit.depositDestinationTag != null &&
+        deposit.depositDestinationTag !== "" ? (
+          <div className="space-y-2">
+            <p className="label mb-0">Destination tag</p>
+            <p className="font-mono text-lg font-bold subcard p-3 text-center">
+              {String(deposit.depositDestinationTag)}
+            </p>
+            <button
+              type="button"
+              className="btn-primary w-full"
+              onClick={() =>
+                void navigator.clipboard.writeText(
+                  String(deposit.depositDestinationTag),
+                )
+              }
+            >
+              Copy destination tag
+            </button>
+          </div>
+        ) : null}
         <p className="text-xs font-mono text-[var(--mp-text-muted)]">
           Ref {deposit.ref}
         </p>
@@ -155,6 +230,7 @@ export function SellWidget() {
           className="field font-mono text-sm"
           value={wallet}
           onChange={(e) => setWallet(e.target.value)}
+          placeholder={isXrpl ? "r… or X-address" : undefined}
         />
       </div>
       {error && (

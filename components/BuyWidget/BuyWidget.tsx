@@ -272,6 +272,7 @@ export function BuyWidget() {
           methodId: state.methodId,
           methodKind: state.methodKind,
           walletAddress: state.wallet,
+          payoutDestinationTag: state.payoutDestinationTag || undefined,
           phoneNumber: state.phone || undefined,
           networkProvider: state.networkProvider || undefined,
           customerName: state.customerName || undefined,
@@ -455,7 +456,11 @@ export function BuyWidget() {
           chainId={config.token.chainId}
           contract={config.token.contract}
           wallet={state.wallet}
+          payoutDestinationTag={state.payoutDestinationTag}
           onWallet={(w) => dispatch({ type: "SET_WALLET", wallet: w })}
+          onDestinationTag={(payoutDestinationTag) =>
+            dispatch({ type: "SET_DESTINATION_TAG", payoutDestinationTag })
+          }
           onBack={() => dispatch({ type: "GOTO", step: "payment" })}
           onNext={() => dispatch({ type: "GOTO", step: "review" })}
         />
@@ -467,6 +472,7 @@ export function BuyWidget() {
           methodId={state.methodId}
           phone={state.phone}
           wallet={state.wallet}
+          payoutDestinationTag={state.payoutDestinationTag}
           chainId={config.token.chainId}
           accepted={state.acceptedRisk}
           submitting={false}

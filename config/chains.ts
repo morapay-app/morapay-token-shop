@@ -2,7 +2,7 @@ export type ChainInfo = {
   chainId: number;
   name: string;
   shortName: string;
-  kind: "evm" | "solana" | "other";
+  kind: "evm" | "solana" | "xrpl" | "other";
   explorerTx: (hash: string) => string;
   explorerAddress: (address: string) => string;
 };
@@ -63,6 +63,14 @@ const chains: Record<number, ChainInfo> = {
     kind: "solana",
     explorerTx: (h) => `https://solscan.io/tx/${h}`,
     explorerAddress: (a) => `https://solscan.io/account/${a}`,
+  },
+  144: {
+    chainId: 144,
+    name: "XRP Ledger",
+    shortName: "XRPL",
+    kind: "xrpl",
+    explorerTx: (h) => `https://livenet.xrpl.org/transactions/${h}`,
+    explorerAddress: (a) => `https://livenet.xrpl.org/accounts/${a}`,
   },
 };
 

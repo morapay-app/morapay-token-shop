@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { walletAddressesEqual } from "@/lib/validate/address";
+import { getChain } from "@/config/chains";
+import { merchantCoreTokenAddress } from "@/lib/morapay/core-token";
 import { morapayFetch } from "./client";
 import { merchantSigningEnabled } from "./merchant-config";
 
@@ -216,13 +219,17 @@ export async function getQuote(
   if (input.action === "ONRAMP") {
     // Server-priced buy quote from the merchant ramp pricing engine (signed). The legacy
     // /api/v1/quotes/checkout route is not exposed on api.morapay.io.
+    const targetTokenAddress =
+      input.tokenAddress != null && input.tokenAddress !== ""
+        ? merchantCoreTokenAddress(Number(input.chain), input.tokenAddress)
+        : undefined;
     const body = {
       direction: "onramp",
       currency: input.inputCurrency.toLowerCase(),
       amount: String(input.inputAmount),
       targetChainId: Number(input.chain),
       targetTokenSymbol: input.outputCurrency.toUpperCase(),
-      ...(input.tokenAddress ? { targetTokenAddress: input.tokenAddress } : {}),
+      ...(targetTokenAddress ? { targetTokenAddress } : {}),
     };
     const data = await morapayFetch<Record<string, unknown>>(
       `${MERCHANT_RAMP}/quote`,
@@ -253,6 +260,10 @@ export async function getQuote(
     });
   }
 
+  const sourceTokenAddress =
+    input.tokenAddress != null
+      ? merchantCoreTokenAddress(Number(input.chain), input.tokenAddress)
+      : undefined;
   const body = {
     direction: "offramp",
     currency: input.outputCurrency.toLowerCase(),
@@ -260,7 +271,7 @@ export async function getQuote(
     // Merchant ramp quote: a sell's token is the *source* asset.
     sourceTokenSymbol: input.inputCurrency.toUpperCase(),
     sourceChainId: Number(input.chain),
-    ...(input.tokenAddress ? { sourceTokenAddress: input.tokenAddress } : {}),
+    ...(sourceTokenAddress ? { sourceTokenAddress } : {}),
   };
   const data = await morapayFetch<Record<string, unknown>>(
     `${MERCHANT_RAMP}/quote`,
@@ -317,18 +328,27 @@ export type InitiateOnrampBody = {
   referral_code?: string;
   turnstileToken?: string;
   payment_method?: "mobile_money" | "bank_transfer" | "bank" | "card";
+  /** XRPL destination tag for exchange / tagged receive addresses */
+  payout_destination_tag?: number;
 };
 
-export async function initiateOnramp(
+export function buildInitiateOnrampPayload(
   body: InitiateOnrampBody,
-  ctx: MorapayCallContext = {},
-) {
+): Record<string, unknown> {
   const paymentMethod =
     body.payment_method === "bank_transfer" || body.payment_method === "bank"
       ? "bank"
       : body.payment_method === "card"
         ? "card"
         : "mobile_money";
+
+  const targetTokenAddress =
+    body.target_token_address != null && body.target_token_address !== ""
+      ? merchantCoreTokenAddress(
+          Number(body.target_chain_id),
+          body.target_token_address,
+        )
+      : undefined;
 
   const payload: Record<string, unknown> = {
     currency: body.currency.toLowerCase(),
@@ -343,11 +363,26 @@ export async function initiateOnramp(
     clientChannel: body.client_channel,
     targetChainId: body.target_chain_id,
     targetTokenSymbol: body.target_token_symbol,
-    targetTokenAddress: body.target_token_address,
+    ...(targetTokenAddress ? { targetTokenAddress } : {}),
     quotedToAmount: body.quoted_to_amount,
     referralCode: body.referral_code,
     turnstileToken: body.turnstileToken,
     shopId: process.env.SHOP_ID,
+  };
+
+  if (body.payout_destination_tag != null) {
+    payload.payoutDestinationTag = body.payout_destination_tag;
+  }
+
+  return payload;
+}
+
+export async function initiateOnramp(
+  body: InitiateOnrampBody,
+  ctx: MorapayCallContext = {},
+) {
+  const payload: Record<string, unknown> = {
+    ...buildInitiateOnrampPayload(body),
     clientIp: ctx.buyerIp,
   };
 
@@ -441,6 +476,7 @@ export async function listTransactions(
   walletAddress: string,
   limit = 10,
   ctx: MorapayCallContext = {},
+  chainId?: number,
 ) {
   const data = await morapayFetch<unknown>(`${MERCHANT_RAMP}/transactions`, {
     searchParams: { limit: String(limit), wallet_address: walletAddress },
@@ -451,12 +487,51 @@ export async function listTransactions(
   const items = Array.isArray(data) ? data : (envelope.items ?? envelope.data ?? []);
   return (items as Record<string, unknown>[])
     .map(normalizeTransaction)
-    .filter(
-      (tx) =>
-        !walletAddress ||
-        String(tx.wallet_address ?? tx.destinationWallet ?? "").toLowerCase() ===
-          walletAddress.toLowerCase(),
-    );
+    .filter((tx) => {
+      if (!walletAddress) return true;
+      const txWallet = String(tx.wallet_address ?? tx.destinationWallet ?? "");
+      return chainId != null
+        ? walletAddressesEqual(txWallet, walletAddress, chainId)
+        : txWallet.toLowerCase() === walletAddress.toLowerCase();
+    });
+}
+
+export function buildInitiateOfframpPayload(
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  const chainId = Number(body.source_chain_id ?? body.sourceChainId ?? 0);
+  const symbol = String(
+    body.source_token_symbol ?? body.sourceTokenSymbol ?? "",
+  ).toUpperCase();
+  const rawContract = body.source_token_address ?? body.sourceTokenAddress;
+  const contract =
+    rawContract != null && String(rawContract) !== ""
+      ? String(rawContract)
+      : undefined;
+  const sourceTokenAddress =
+    contract != null
+      ? merchantCoreTokenAddress(chainId, contract)
+      : undefined;
+
+  const payload: Record<string, unknown> = {
+    currency: String(body.currency ?? "").toLowerCase(),
+    amount: String(body.token_amount ?? body.amount ?? ""),
+    destinationWallet: body.wallet_address,
+    bankCode: body.bank_code ?? body.bankCode,
+    accountNumber: body.account_number ?? body.accountNumber,
+    customerName: body.customer_name,
+    sourceChainId: chainId,
+    sourceTokenSymbol: symbol,
+    referralCode: body.referral_code,
+    turnstileToken: body.turnstileToken,
+    clientChannel: body.client_channel,
+  };
+
+  if (sourceTokenAddress) {
+    payload.sourceTokenAddress = sourceTokenAddress;
+  }
+
+  return payload;
 }
 
 export async function initiateOfframp(
@@ -464,18 +539,7 @@ export async function initiateOfframp(
   ctx: MorapayCallContext = {},
 ) {
   const payload = {
-    currency: String(body.currency ?? "").toLowerCase(),
-    amount: String(body.token_amount ?? body.amount ?? ""),
-    destinationWallet: body.wallet_address,
-    bankCode: body.bank_code ?? body.bankCode,
-    accountNumber: body.account_number ?? body.accountNumber,
-    customerName: body.customer_name,
-    targetChainId: body.source_chain_id,
-    targetTokenSymbol: body.source_token_symbol,
-    targetTokenAddress: body.source_token_address,
-    referralCode: body.referral_code,
-    turnstileToken: body.turnstileToken,
-    clientChannel: body.client_channel,
+    ...buildInitiateOfframpPayload(body),
     clientIp: ctx.buyerIp,
   };
 
@@ -484,10 +548,16 @@ export async function initiateOfframp(
     { method: "POST", body: payload, timeoutMs: 60_000, buyerIp: ctx.buyerIp },
   );
   const deposit = data.deposit as Record<string, unknown> | undefined;
+  const depositDestinationTag =
+    deposit?.destinationTag ??
+    deposit?.destination_tag ??
+    data.depositDestinationTag ??
+    data.deposit_destination_tag;
   return {
     ...data,
     merchantReference: data.reference ?? data.merchantReference,
     depositAddress: deposit?.address ?? data.depositAddress,
+    depositDestinationTag,
   } as Record<string, unknown>;
 }
 
@@ -497,12 +567,20 @@ export async function confirmOfframp(
   ctx: MorapayCallContext = {},
 ) {
   const tx = await getTransaction(ref, body.wallet_address, ctx);
+  const deposit = tx.deposit as Record<string, unknown> | undefined;
+  const depositDestinationTag =
+    tx.depositDestinationTag ??
+    tx.deposit_destination_tag ??
+    deposit?.destinationTag ??
+    deposit?.destination_tag;
   return {
     ...tx,
     depositAddress:
-      tx.depositAddress ?? tx.deposit_address ?? (tx.deposit as { address?: string })?.address,
+      tx.depositAddress ?? tx.deposit_address ?? deposit?.address,
     deposit_address:
       tx.deposit_address ?? tx.depositAddress,
+    depositDestinationTag,
+    deposit_destination_tag: depositDestinationTag,
   };
 }
 
@@ -525,8 +603,54 @@ export function isTokenSupported(
   const needle = tokenAddress.toLowerCase();
   return config.supportedOnrampTargets.some(
     (t) =>
-      t.chainId === chainId && t.tokenAddress.toLowerCase() === needle,
+      t.chainId === chainId &&
+      t.tokenAddress.toLowerCase() === needle,
   );
+}
+
+export function parseOfframpDepositInfo(confirmed: Record<string, unknown>): {
+  depositAddress: string;
+  depositDestinationTag: number | string | undefined;
+} {
+  const deposit = confirmed.deposit as Record<string, unknown> | undefined;
+  const depositAddress = String(
+    deposit?.address ??
+      confirmed.depositAddress ??
+      confirmed.deposit_address ??
+      "",
+  );
+  const rawTag =
+    deposit?.destinationTag ??
+    deposit?.destination_tag ??
+    confirmed.depositDestinationTag ??
+    confirmed.deposit_destination_tag;
+  const depositDestinationTag =
+    rawTag == null || rawTag === ""
+      ? undefined
+      : typeof rawTag === "number" || typeof rawTag === "string"
+        ? rawTag
+        : undefined;
+  return { depositAddress, depositDestinationTag };
+}
+
+export function xrplOfframpDepositError(
+  chainId: number,
+  info: {
+    depositAddress: string;
+    depositDestinationTag?: number | string;
+  },
+): string | null {
+  if (getChain(chainId)?.kind !== "xrpl") return null;
+  if (!info.depositAddress) {
+    return "Missing platform deposit address. Please contact support.";
+  }
+  if (
+    info.depositDestinationTag == null ||
+    String(info.depositDestinationTag).trim() === ""
+  ) {
+    return "Missing deposit destination tag. Do not send XRP until support provides a tag.";
+  }
+  return null;
 }
 
 export { merchantSigningEnabled };

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="XRP shop mark">
+  <rect width="128" height="128" rx="24" fill="#0F172A"/>
+  <circle cx="64" cy="64" r="46" fill="#2563EB" opacity="0.2"/>
+  <path fill="#38BDF8" d="M28 52h72v8H64L28 88V52zm72 24H28v-8h36l36 28V76z"/>
+  <path fill="#E0F2FE" d="M44 64h40v8H44z" opacity="0.9"/>
+</svg>

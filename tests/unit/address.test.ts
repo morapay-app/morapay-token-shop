@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { validateWalletAddress } from "@/lib/validate/address";
+import {
+  classicAddressToXAddress,
+  encodeAccountID,
+  decodeAccountID,
+} from "ripple-address-codec";
+import {
+  parseXrplWalletInput,
+  validateWalletAddress,
+  walletAddressesEqual,
+  walletStorageKey,
+} from "@/lib/validate/address";
 
 const CONTRACT = "0x5C9Ff301Ec2d882B635813739cC07330788d7322";
 const VALID = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0";
@@ -22,6 +32,43 @@ describe("address validation", () => {
       ).ok,
     ).toBe(false);
     expect(validateWalletAddress(CONTRACT, 56, CONTRACT).ok).toBe(false);
+  });
+
+  it("accepts XRPL classic and mainnet X-address, rejects testnet X-address", () => {
+    const classic = "rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv";
+    expect(validateWalletAddress(classic, 144, "xrp").ok).toBe(true);
+    const xMain = classicAddressToXAddress(classic, false, false);
+    const xTest = classicAddressToXAddress(classic, false, true);
+    const main = validateWalletAddress(xMain, 144, "xrp");
+    expect(main.ok).toBe(true);
+    expect(validateWalletAddress(xTest, 144, "xrp").ok).toBe(false);
+    expect(validateWalletAddress("xrp", 144, "xrp").ok).toBe(false);
+  });
+
+  it("extracts embedded tag from X-address", () => {
+    const classic = "rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv";
+    const tagged = classicAddressToXAddress(classic, 12345, false);
+    const parsed = parseXrplWalletInput(tagged);
+    expect(parsed?.classicAddress).toBe(classic);
+    expect(parsed?.embeddedDestinationTag).toBe(12345);
+    const v = validateWalletAddress(tagged, 144, "xrp");
+    expect(v.ok).toBe(true);
+    if (v.ok) {
+      expect(v.normalized).toBe(classic);
+      expect(v.embeddedDestinationTag).toBe(12345);
+    }
+  });
+
+  it("normalizes both sides in walletAddressesEqual", () => {
+    const classic = "rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv";
+    const alt = encodeAccountID(decodeAccountID(classic));
+    expect(walletAddressesEqual(classic, alt, 144)).toBe(true);
+  });
+
+  it("preserves XRPL case for storage keys", () => {
+    const classic = "rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv";
+    expect(walletStorageKey(classic, 144)).toBe(classic);
+    expect(walletAddressesEqual(classic, classic, 144)).toBe(true);
   });
 
   it("accepts Solana for chain 101 and rejects for EVM shops", () => {

@@ -21,7 +21,11 @@ async function main() {
   const shopId = await ask(rl, "shopId (kebab-case)", "my-token");
   const ticker = await ask(rl, "Token ticker", "TOKEN");
   const name = await ask(rl, "Token name", ticker);
-  const chainId = await ask(rl, "chainId (56=BSC, 101=Solana)", "56");
+  const chainId = await ask(
+    rl,
+    "chainId (56=BSC, 101=Solana, 144=XRPL native XRP)",
+    "56",
+  );
   const contract = await ask(rl, "Token contract / mint");
   const siteUrl = await ask(rl, "Site URL", "https://example.com");
   const accent = await ask(rl, "Accent colour #RRGGBB", "#2B6CB0");
