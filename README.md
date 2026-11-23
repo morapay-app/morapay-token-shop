@@ -124,6 +124,17 @@ Brand assets live under `public/brand/wikicat/`. With `SHOP_ID=wikicat`, the bui
 
 On **Railway**, add a new service from this repo with `SHOP_ID=wikicat`, your `pk_*` / `sk_*` keys, `MORAPAY_ENV`, and `NEXT_PUBLIC_SITE_URL` for the public URL.
 
+**IPOD** (`examples/ipod.config.ts`) — IPOD on Base (chain `8453`); simple hero layout; NGN bank + Ghana MoMo. Token metadata is aligned with Morapay’s catalog (`GET /api/public/catalog/tokens?chain_id=8453`).
+
+### IPOD deploy
+
+```bash
+SHOP_ID=ipod
+NEXT_PUBLIC_SITE_URL=https://your-ipod-host.example
+```
+
+Same `MORAPAY_MERCHANT_PUBLIC_KEY`, `MORAPAY_MERCHANT_SECRET_KEY`, `MORAPAY_ENV`, and `MORAPAY_API_BASE` as other shops. Verify with `pnpm smoke:ipod` (read-only quotes; no orders).
+
 ## Compliance
 
 No investment hype. Risk disclaimer stays visible. Confirm regulatory status before paid ads.

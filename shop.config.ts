@@ -11,6 +11,7 @@ import griotConfig from "./examples/griot.config";
 import milanConfig from "./examples/milan.config";
 import wikicatConfig from "./examples/wikicat.config";
 import xrpConfig from "./examples/xrp.config";
+import ipodConfig from "./examples/ipod.config";
 import { ShopConfigSchema, type ShopConfig } from "./config/schema";
 
 const SHOPS: Record<string, unknown> = {
@@ -19,6 +20,7 @@ const SHOPS: Record<string, unknown> = {
   [milanConfig.shopId]: milanConfig,
   [wikicatConfig.shopId]: wikicatConfig,
   [xrpConfig.shopId]: xrpConfig,
+  [ipodConfig.shopId]: ipodConfig,
 };
 
 const selected = SHOPS[process.env.SHOP_ID ?? ""] ?? milanConfig;

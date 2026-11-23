@@ -4,18 +4,22 @@ import { shopConfig } from "@/shop.config";
 export function Header({
   onCulture = false,
   wikiCat = false,
+  brandHero = false,
 }: {
   onCulture?: boolean;
   wikiCat?: boolean;
+  brandHero?: boolean;
 }) {
   return (
     <header
       className={
         wikiCat
           ? "wikicat-header"
-          : onCulture
-            ? "culture-header"
-            : "w-full max-w-[480px] mx-auto px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2 flex items-center justify-between gap-3"
+          : brandHero
+            ? "brand-hero-header"
+            : onCulture
+              ? "culture-header"
+              : "w-full max-w-[480px] mx-auto px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2 flex items-center justify-between gap-3"
       }
     >
       <Link href="/" className="flex items-center gap-3 min-w-0">
@@ -26,7 +30,7 @@ export function Header({
           width={40}
           height={40}
           className={
-            onCulture || wikiCat
+            onCulture || wikiCat || brandHero
               ? "rounded-full"
               : "rounded-full bg-[var(--mp-subcard)]"
           }
@@ -41,7 +45,9 @@ export function Header({
                 ? "text-xs opacity-70"
                 : wikiCat
                   ? "text-xs wikicat-header-ticker"
-                  : "text-xs text-[var(--mp-text-muted)]"
+                  : brandHero
+                    ? "text-xs brand-hero-header-ticker"
+                    : "text-xs text-[var(--mp-text-muted)]"
             }
           >
             ${shopConfig.token.ticker}

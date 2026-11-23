@@ -684,7 +684,8 @@ select.pill {
  * Morapay buy/sell widget on the WikiCat hero (sky background): reset inherited
  * marketing colors so labels, inputs, and notices stay plum/cream like other shops.
  */
-.shop-wikicat .morapay-widget-surface {
+.shop-wikicat .morapay-widget-surface,
+.shop-brand-hero .morapay-widget-surface {
   color: var(--mp-text);
   text-align: left;
   --mp-text: #2b0a30;
@@ -696,38 +697,116 @@ select.pill {
   --brand-accent-text: #0a0a0a;
 }
 
-.shop-wikicat .morapay-widget-surface .card {
+.shop-wikicat .morapay-widget-surface .card,
+.shop-brand-hero .morapay-widget-surface .card {
   color: var(--mp-text);
   background: var(--mp-card);
 }
 
-.shop-wikicat .morapay-widget-surface .card .font-heading {
+.shop-wikicat .morapay-widget-surface .card .font-heading,
+.shop-brand-hero .morapay-widget-surface .card .font-heading {
   color: var(--mp-text);
 }
 
-.shop-wikicat .morapay-widget-surface .card .label {
+.shop-wikicat .morapay-widget-surface .card .label,
+.shop-brand-hero .morapay-widget-surface .card .label {
   color: var(--mp-text);
 }
 
-.shop-wikicat .morapay-widget-surface .card .btn-ghost {
+.shop-wikicat .morapay-widget-surface .card .btn-ghost,
+.shop-brand-hero .morapay-widget-surface .card .btn-ghost {
   color: var(--mp-text);
 }
 
-.shop-wikicat .morapay-widget-surface .card .field {
+.shop-wikicat .morapay-widget-surface .card .field,
+.shop-brand-hero .morapay-widget-surface .card .field {
   color: var(--mp-text);
   background-color: var(--mp-hero);
 }
 
-.shop-wikicat .morapay-widget-surface .card .receipt-card {
+.shop-wikicat .morapay-widget-surface .card .receipt-card,
+.shop-brand-hero .morapay-widget-surface .card .receipt-card {
   color: var(--receipt-text);
 }
 
-.shop-wikicat .morapay-widget-surface .mp-setup-notice code {
+.shop-wikicat .morapay-widget-surface .mp-setup-notice code,
+.shop-brand-hero .morapay-widget-surface .mp-setup-notice code {
   color: var(--mp-text);
 }
 
 .shop-wikicat .wikicat-hero ~ section h2 {
   color: var(--wikicat-violet);
+}
+
+/* ---- Simple brand hero (IPOD and similar shops) ---- */
+.shop-brand-hero {
+  --mp-canvas: color-mix(in srgb, var(--brand-hero-bg) 35%, #efeee2);
+}
+
+.shop-brand-hero .brand-hero {
+  background: var(--brand-hero-bg);
+  color: var(--mp-text);
+  padding-bottom: 2rem;
+}
+
+.shop-brand-hero .brand-hero-inner {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 0 1rem 1.25rem;
+  text-align: center;
+}
+
+.shop-brand-hero .brand-hero-header {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1.25rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.shop-brand-hero .brand-hero-header-ticker {
+  color: var(--mp-text-muted);
+  font-weight: 700;
+}
+
+.shop-brand-hero .brand-hero-logo {
+  width: min(148px, 38vw);
+  height: auto;
+  margin: 0.35rem auto 0.5rem;
+  display: block;
+}
+
+.shop-brand-hero .brand-hero-title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(2.25rem, 9vw, 3.25rem);
+  line-height: 1.05;
+  color: var(--brand-accent-on-light, var(--brand-accent));
+}
+
+.shop-brand-hero .brand-hero-tagline {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin: 0 0 0.35rem;
+}
+
+.shop-brand-hero .brand-hero-subline {
+  margin: 0 auto 0.85rem;
+  max-width: 28rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--mp-text-muted);
+}
+
+.shop-brand-hero .brand-hero-buy {
+  margin-top: 0.5rem;
+}
+
+.shop-brand-hero .brand-hero ~ section h2 {
+  color: var(--brand-accent-on-light, var(--brand-accent));
 }
 
 @media (prefers-reduced-motion: reduce) {
