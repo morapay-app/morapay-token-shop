@@ -2,7 +2,7 @@ import type { ShopConfigInput } from "@/config/schema";
 
 const resolvedSiteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-  "https://xrp-shop-production.up.railway.app";
+  "https://xrp.morapay.shop";
 
 /** Native XRP on the XRP Ledger — chainId 144, Morapay contract id `xrp`. */
 const xrpConfig = {
