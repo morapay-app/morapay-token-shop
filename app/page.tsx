@@ -11,6 +11,7 @@ import {
   CultureRail,
   CultureStageBrand,
 } from "@/components/CultureRails";
+import { SimpleTokenHome } from "@/components/themes/SimpleTokenHome";
 import { WikiCatHome } from "@/components/themes/WikiCatHome";
 import { resolveHomeLayoutVariant } from "@/lib/home-layout";
 import { shopConfig } from "@/shop.config";
@@ -60,13 +61,17 @@ export default function HomePage() {
       className={
         layoutVariant === "wikicat"
           ? "shop-wikicat"
-          : culture
+          : layoutVariant === "simple"
+            ? "shop-brand-hero"
+            : culture
             ? "shop-with-culture"
             : undefined
       }
     >
       {layoutVariant === "wikicat" ? (
         <WikiCatHome headline={headline} subline={shopConfig.brand.subline} />
+      ) : layoutVariant === "simple" ? (
+        <SimpleTokenHome headline={headline} subline={shopConfig.brand.subline} />
       ) : culture ? (
         <section
           className="culture-stage"

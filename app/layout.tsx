@@ -101,10 +101,13 @@ export const metadata: Metadata = {
   },
 };
 
+const homeLayout = resolveHomeLayoutVariant(shopConfig);
+
 export const viewport: Viewport = {
   themeColor:
-    resolveHomeLayoutVariant(shopConfig) === "wikicat"
-      ? (shopConfig.brand.heroBg ?? "#9DE7F1")
+    homeLayout === "wikicat" || homeLayout === "simple"
+      ? (shopConfig.brand.heroBg ??
+          (homeLayout === "wikicat" ? "#9DE7F1" : "#ffffff"))
       : (shopConfig.culture?.stageBg ?? shopConfig.brand.heroBg ?? "#ffffff"),
   width: "device-width",
   initialScale: 1,

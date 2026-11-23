@@ -6,6 +6,7 @@ import {
 } from "@/config/schema";
 import milan from "@/examples/milan.config";
 import wikicat from "@/examples/wikicat.config";
+import ipod from "@/examples/ipod.config";
 import xrp from "@/examples/xrp.config";
 
 function base(): ShopConfigInput {
@@ -69,5 +70,13 @@ describe("config schema", () => {
     cfg.token.contract = "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
     const r = ShopConfigSchema.safeParse(cfg);
     expect(r.success).toBe(false);
+  });
+
+  it("accepts the IPOD example", () => {
+    expect(ShopConfigSchema.safeParse(ipod).success).toBe(true);
+  });
+
+  it("IPOD example has clean copy", () => {
+    expect(lintShopConfig(ipod)).toEqual([]);
   });
 });

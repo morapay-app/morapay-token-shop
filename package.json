@@ -15,7 +15,8 @@
     "new-shop": "tsx scripts/new-shop.ts",
     "cf:build": "opennextjs-cloudflare build",
     "cf:deploy": "opennextjs-cloudflare build && wrangler deploy",
-    "smoke:live": "tsx scripts/live-smoke.ts"
+    "smoke:live": "tsx scripts/live-smoke.ts",
+    "smoke:ipod": "tsx scripts/ipod-smoke.ts"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.2.1",
