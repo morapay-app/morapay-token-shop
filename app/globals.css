@@ -139,6 +139,30 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--mp-pill-active) 25%, transparent);
 }
 
+/*
+ * Dropdowns draw their own chevron so its place is exact on every browser: it sits 1px inside the
+ * text padding (padding - 1px from the right edge). The native arrow could not be positioned.
+ */
+select.field,
+select.pill {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%238a8f98' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 12px 12px;
+  cursor: pointer;
+}
+
+select.field {
+  padding-right: 2.5rem;
+  background-position: right calc(1rem - 1px) center;
+}
+
+select.pill {
+  padding-right: 2rem;
+  background-position: right calc(0.75rem - 1px) center;
+}
+
 .label {
   display: block;
   font-size: 0.875rem;
@@ -691,7 +715,7 @@ body {
 
 .shop-wikicat .morapay-widget-surface .card .field {
   color: var(--mp-text);
-  background: var(--mp-hero);
+  background-color: var(--mp-hero);
 }
 
 .shop-wikicat .morapay-widget-surface .card .receipt-card {

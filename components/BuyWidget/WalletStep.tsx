@@ -7,6 +7,7 @@ import {
   validateDestinationTag,
 } from "@/lib/validate/destination-tag";
 import { getChain } from "@/config/chains";
+import { walletAddressGroups, walletConfirmKey } from "@/lib/wallet-confirm";
 
 type Props = {
   chainId: number;
@@ -31,6 +32,8 @@ export function WalletStep(props: Props) {
     onNext,
   } = props;
   const [remember, setRemember] = useState(false);
+  /** Key of the address + tag the buyer last confirmed; any edit no longer matches it. */
+  const [confirmedKey, setConfirmedKey] = useState<string | null>(null);
   const chain = getChain(chainId);
   const validation = useMemo(
     () =>
@@ -54,6 +57,16 @@ export function WalletStep(props: Props) {
     [payoutDestinationTag, validation],
   );
 
+  const confirmable =
+    validation?.ok === true && tagValidation.ok && resolvedTag?.ok === true;
+  const pendingKey = confirmable
+    ? walletConfirmKey(
+        validation.normalized,
+        resolvedTag.value != null ? String(resolvedTag.value) : "",
+      )
+    : null;
+  const confirmed = pendingKey != null && confirmedKey === pendingKey;
+
   const tagLocked =
     validation?.ok === true && validation.embeddedDestinationTag != null;
 
@@ -71,6 +84,7 @@ export function WalletStep(props: Props) {
 
   function next() {
     if (!validation?.ok || !tagValidation.ok || !resolvedTag?.ok) return;
+    if (!confirmed) return;
     if (remember) {
       try {
         localStorage.setItem("mp_wallet", validation.normalized);
@@ -169,6 +183,48 @@ export function WalletStep(props: Props) {
         </div>
       )}
 
+      {confirmable && pendingKey && (
+        <div className="subcard p-4 space-y-3" aria-live="polite">
+          <p className="text-sm font-medium">Check this is your wallet</p>
+          <p className="font-mono text-sm break-all leading-6">
+            {walletAddressGroups(validation.normalized).map((group, i, all) => (
+              <span
+                key={`${i}-${group}`}
+                className={
+                  i < 2 || i >= all.length - 2
+                    ? "font-semibold text-[var(--mp-text)]"
+                    : "text-[var(--mp-text-muted)]"
+                }
+              >
+                {group}
+                {i < all.length - 1 ? " " : ""}
+              </span>
+            ))}
+          </p>
+          {chain?.kind === "xrpl" && (
+            <p className="text-sm text-[var(--mp-text-muted)]">
+              Destination tag:{" "}
+              <span className="font-mono text-[var(--mp-text)]">
+                {resolvedTag.value != null ? String(resolvedTag.value) : "none"}
+              </span>
+            </p>
+          )}
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={confirmed}
+              onChange={(e) => setConfirmedKey(e.target.checked ? pendingKey : null)}
+            />
+            <span>
+              I checked the start and end of this address against my wallet
+              {chain?.kind === "xrpl" ? " and the destination tag" : ""}. Crypto
+              sent to a wrong address can&apos;t be recovered.
+            </span>
+          </label>
+        </div>
+      )}
+
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -188,7 +244,8 @@ export function WalletStep(props: Props) {
           disabled={
             !validation?.ok ||
             !tagValidation.ok ||
-            resolvedTag?.ok === false
+            resolvedTag?.ok === false ||
+            !confirmed
           }
           onClick={next}
         >

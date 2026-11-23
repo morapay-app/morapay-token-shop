@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { shopConfig } from "@/shop.config";
-import { resolveBrandFaviconPath } from "@/lib/brand-icon";
+import { resolveBrandAppleIconPath, resolveBrandFaviconPath } from "@/lib/brand-icon";
 import { resolveHomeLayoutVariant } from "@/lib/home-layout";
 import { accentForLightText } from "@/lib/contrast";
 import "./globals.css";
@@ -97,7 +97,7 @@ export const metadata: Metadata = {
   icons: {
     icon: brandFavicon,
     shortcut: brandFavicon,
-    apple: brandFavicon,
+    apple: resolveBrandAppleIconPath(shopConfig.shopId, brandFavicon),
   },
 };
 

@@ -22,3 +22,9 @@ export function resolveBrandFaviconPath(
   }
   return ROOT_BRAND_FAVICON;
 }
+
+/** Build-time Apple touch icon: per-shop PNG when present, else the favicon. */
+export function resolveBrandAppleIconPath(shopId: string, fallback: string): string {
+  const perShopFile = path.join(process.cwd(), "public", "brand", shopId, "apple-touch-icon.png");
+  return existsSync(perShopFile) ? `/brand/${shopId}/apple-touch-icon.png` : fallback;
+}
