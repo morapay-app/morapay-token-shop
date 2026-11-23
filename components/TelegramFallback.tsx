@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { buildDeskDeepLink } from "@/lib/telegram";
 import { getChain } from "@/config/chains";
+import { flagFor } from "@/config/countries";
 import { shopConfig } from "@/shop.config";
 import { track } from "@/lib/analytics";
 
@@ -15,6 +16,9 @@ type Props = {
   contract: string;
   wallet: string;
   method: string;
+  countries: Array<{ code: string; currency: string }>;
+  country: string;
+  onCountry: (code: string, currency: string) => void;
   onAmount: (v: string) => void;
   onWallet: (v: string) => void;
 };
@@ -47,6 +51,26 @@ export function TelegramFallback(props: Props) {
         order on Telegram.
       </div>
       <h2 className="font-heading text-xl font-bold">Continue on Telegram</h2>
+      <div>
+        <label htmlFor="fb-country" className="label">
+          Country
+        </label>
+        <select
+          id="fb-country"
+          className="field"
+          value={props.country}
+          onChange={(e) => {
+            const c = props.countries.find((x) => x.code === e.target.value);
+            if (c) props.onCountry(c.code, c.currency);
+          }}
+        >
+          {props.countries.map((c) => (
+            <option key={c.code} value={c.code}>
+              {flagFor(c.code)} {c.code} · {c.currency}
+            </option>
+          ))}
+        </select>
+      </div>
       <div>
         <label htmlFor="fb-amount" className="label">
           Amount ({props.currency})

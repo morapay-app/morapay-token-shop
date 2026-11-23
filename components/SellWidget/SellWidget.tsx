@@ -1,10 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { shopConfig } from "@/shop.config";
 import { validateWalletAddress } from "@/lib/validate/address";
 import { getChain } from "@/config/chains";
+import {
+  institutionLabel,
+  keepInstitution,
+  sellAmountError,
+  shopCurrencies,
+  sortInstitutions,
+  type SellInstitution,
+} from "@/lib/sell";
+
+const CURRENCIES = shopCurrencies(shopConfig);
+const DEFAULT_CURRENCY =
+  shopConfig.countries.list.find((c) => c.code === shopConfig.countries.default)?.currency.toUpperCase() ??
+  CURRENCIES[0];
 
 /**
  * Sell flow — only mounted when config.sell.enabled.
@@ -12,9 +25,15 @@ import { getChain } from "@/config/chains";
  */
 export function SellWidget() {
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("GHS");
+  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [wallet, setWallet] = useState("");
-  const [bankCode, setBankCode] = useState("0004");
+  const [bankCode, setBankCode] = useState("");
+  const [institutions, setInstitutions] = useState<SellInstitution[]>([]);
+  const [institutionsError, setInstitutionsError] = useState<string | null>(null);
+  const [available, setAvailable] = useState<boolean | null>(null);
+  const [payout, setPayout] = useState<{ amount: string; currency: string } | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const quoteReq = useRef(0);
   const [account, setAccount] = useState("");
   const [deposit, setDeposit] = useState<{
     ref: string;
@@ -25,6 +44,70 @@ export function SellWidget() {
   const [loading, setLoading] = useState(false);
   const chain = getChain(shopConfig.token.chainId);
   const isXrpl = chain?.kind === "xrpl";
+
+  const amountError = amount ? sellAmountError(amount, shopConfig) : null;
+  const institution = institutions.find((i) => i.code === bankCode);
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/config")
+      .then((r) => r.json())
+      .then((j) => {
+        if (active) setAvailable(j.success === true && j.data.fallback !== true);
+      })
+      .catch(() => {
+        if (active) setAvailable(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void fetch(`/api/institutions?currency=${currency.toLowerCase()}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!active) return;
+        const list = j.success ? sortInstitutions(j.data.institutions ?? []) : [];
+        setInstitutions(list);
+        setBankCode((current) => keepInstitution(current, list));
+        setInstitutionsError(list.length === 0 ? "Payout options could not be loaded." : null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setInstitutions([]);
+        setBankCode("");
+        setInstitutionsError("Payout options could not be loaded.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [currency]);
+
+  useEffect(() => {
+    const reqId = ++quoteReq.current;
+    const timer = setTimeout(() => {
+      setPayout(null);
+      setQuoteError(null);
+      if (!available || !amount || sellAmountError(amount, shopConfig)) return;
+      void fetch("/api/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "OFFRAMP", inputAmount: amount, inputCurrency: currency }),
+      })
+        .then((r) => r.json())
+        .then((j) => {
+          if (reqId !== quoteReq.current) return;
+          if (j.success) setPayout({ amount: j.data.output.amount, currency: j.data.output.currency });
+          else setQuoteError(j.message ?? "No quote right now.");
+        })
+        .catch(() => {
+          if (reqId === quoteReq.current) setQuoteError("No quote right now.");
+        });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [amount, currency, available]);
 
   async function submit() {
     setError(null);
@@ -106,8 +189,8 @@ export function SellWidget() {
       <div className="card p-5 space-y-4">
         <h2 className="font-heading text-xl font-bold">Send tokens</h2>
         <p className="text-sm text-[var(--mp-text-muted)]">
-          Send exactly {amount} ${shopConfig.token.ticker} to the address below
-          within 5 minutes.
+          Send exactly {amount} {shopConfig.token.ticker} to the address below
+          now. Orders with no deposit are cancelled.
         </p>
         {tagRequired && (
           <div
@@ -171,11 +254,21 @@ export function SellWidget() {
     );
   }
 
+  if (available === false) {
+    return (
+      <div className="card p-5" role="status">
+        <p className="text-sm text-[var(--mp-warning-text)]">
+          Selling is temporarily unavailable.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="card p-5 space-y-4">
       <div>
         <label htmlFor="sell-amount" className="label">
-          Token amount
+          {shopConfig.token.ticker} to sell
         </label>
         <input
           id="sell-amount"
@@ -183,7 +276,17 @@ export function SellWidget() {
           inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
+          aria-describedby="sell-hint"
         />
+        <p id="sell-hint" className="mt-2 text-sm text-[var(--mp-text-muted)]">
+          {amountError ??
+            quoteError ??
+            (payout
+              ? `You receive about ${payout.amount} ${payout.currency}`
+              : shopConfig.sell.minToken != null
+                ? `Minimum ${shopConfig.sell.minToken} ${shopConfig.token.ticker}`
+                : null)}
+        </p>
       </div>
       <div>
         <label htmlFor="sell-currency" className="label">
@@ -195,24 +298,39 @@ export function SellWidget() {
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
         >
-          <option value="GHS">GHS</option>
-          <option value="NGN">NGN</option>
+          {CURRENCIES.map((code) => (
+            <option key={code} value={code}>
+              {code}
+            </option>
+          ))}
         </select>
       </div>
       <div>
         <label htmlFor="sell-bank" className="label">
-          Payout institution code
+          Network or bank
         </label>
-        <input
+        <select
           id="sell-bank"
           className="field"
           value={bankCode}
           onChange={(e) => setBankCode(e.target.value)}
-        />
+        >
+          <option value="">Choose one</option>
+          {institutions.map((i) => (
+            <option key={i.code} value={i.code}>
+              {institutionLabel(i)}
+            </option>
+          ))}
+        </select>
+        {institutionsError && (
+          <p className="mt-2 text-sm text-[var(--mp-warning-text)]" role="alert">
+            {institutionsError}
+          </p>
+        )}
       </div>
       <div>
         <label htmlFor="sell-account" className="label">
-          Account / phone
+          {institution?.kind === "mobile_money" ? "Mobile money number" : "Account number"}
         </label>
         <input
           id="sell-account"
@@ -241,7 +359,7 @@ export function SellWidget() {
       <button
         type="button"
         className="btn-primary w-full"
-        disabled={loading || !amount || !account || !wallet}
+        disabled={loading || !payout || !bankCode || !account || !wallet}
         onClick={() => void submit()}
       >
         {loading ? "Starting…" : "Continue"}

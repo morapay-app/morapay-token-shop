@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { cookies } from "next/headers";
 import {
+  getBanks,
   getQuote,
   initiateOfframp,
   confirmOfframp,
@@ -8,6 +9,7 @@ import {
   xrplOfframpDepositError,
 } from "@/lib/morapay/ramp";
 import { getShopConfig, getHealth } from "@/lib/shop-runtime";
+import { sellAmountError, shopCurrencies } from "@/lib/sell";
 import { jsonOk, jsonErr } from "@/lib/api-response";
 import { clientIp, rateLimit, RL } from "@/lib/ratelimit";
 import { validateWalletAddress } from "@/lib/validate/address";
@@ -63,8 +65,21 @@ export async function POST(req: Request) {
       return jsonErr({ message: addr.reason, status: 400 }, 400);
     }
 
+    if (!shopCurrencies(shop).includes(body.currency.toUpperCase())) {
+      return jsonErr({ message: "Payout currency is not available.", status: 400 }, 400);
+    }
+    const amountError = sellAmountError(body.tokenAmount, shop);
+    if (amountError) {
+      return jsonErr({ message: amountError, status: 400 }, 400);
+    }
+
     const morapayCtx = { buyerIp: ip };
-    await getQuote(
+    const banks = await getBanks(body.currency, morapayCtx);
+    if (!banks.institutions.some((i) => i.code === body.bankCode)) {
+      return jsonErr({ message: "Choose a payout network or bank.", status: 400 }, 400);
+    }
+
+    const quote = await getQuote(
       {
         action: "OFFRAMP",
         inputAmount: body.tokenAmount,
@@ -145,7 +160,7 @@ export async function POST(req: Request) {
       depositAddress,
       depositDestinationTag,
       wallet: addr.normalized,
-      raw: confirmed,
+      payout: { amount: quote.output.amount, currency: quote.output.currency },
     });
   } catch (err) {
     return jsonErr(err, 502);

@@ -386,7 +386,13 @@ export function BuyWidget() {
         chainId={config.token.chainId}
         contract={config.token.contract}
         wallet={state.wallet}
-        method={state.methodId || "mobile_money"}
+        method={state.methodId || activeCountry?.methods[0]?.kind || "mobile_money"}
+        countries={config.countries}
+        country={state.country}
+        onCountry={(code, currency) => {
+          dispatch({ type: "SET_COUNTRY", country: code, currency });
+          track("country_changed", { code });
+        }}
         onAmount={(v) => dispatch({ type: "SET_AMOUNT", amount: v })}
         onWallet={(v) => dispatch({ type: "SET_WALLET", wallet: v })}
       />
