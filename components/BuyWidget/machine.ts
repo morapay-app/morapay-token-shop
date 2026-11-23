@@ -35,6 +35,7 @@ export type BuyState = {
   phone: string;
   customerName: string;
   wallet: string;
+  payoutDestinationTag: string;
   quote: QuoteView | null;
   acceptedRisk: boolean;
   ref: string | null;
@@ -59,6 +60,7 @@ export type BuyAction =
   | { type: "SET_NETWORK"; networkProvider: string }
   | { type: "SET_NAME"; customerName: string }
   | { type: "SET_WALLET"; wallet: string }
+  | { type: "SET_DESTINATION_TAG"; payoutDestinationTag: string }
   | { type: "SET_RISK"; accepted: boolean }
   | { type: "SET_OTP"; otp: string }
   | { type: "GOTO"; step: BuyStep }
@@ -90,6 +92,7 @@ export const initialBuyState = (country: string, currency: string): BuyState => 
   phone: "",
   customerName: "",
   wallet: "",
+  payoutDestinationTag: "",
   quote: null,
   acceptedRisk: false,
   ref: null,
@@ -142,6 +145,8 @@ export function buyReducer(state: BuyState, action: BuyAction): BuyState {
       return { ...state, customerName: action.customerName };
     case "SET_WALLET":
       return { ...state, wallet: action.wallet };
+    case "SET_DESTINATION_TAG":
+      return { ...state, payoutDestinationTag: action.payoutDestinationTag };
     case "SET_RISK":
       return { ...state, acceptedRisk: action.accepted };
     case "SET_OTP":

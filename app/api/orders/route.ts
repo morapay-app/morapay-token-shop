@@ -11,7 +11,11 @@ import { MorapayApiError } from "@/lib/morapay/client";
 import { getShopConfig, getHealth } from "@/lib/shop-runtime";
 import { jsonOk, jsonErr } from "@/lib/api-response";
 import { clientIp, rateLimit, RL } from "@/lib/ratelimit";
-import { validateWalletAddress } from "@/lib/validate/address";
+import {
+  validateWalletAddress,
+  walletStorageKey,
+} from "@/lib/validate/address";
+import { validateDestinationTag } from "@/lib/validate/destination-tag";
 import { parsePhoneForCountry, maskPhone } from "@/lib/validate/phone";
 import { REFERRAL_COOKIE, resolveReferral } from "@/lib/referral";
 
@@ -31,6 +35,7 @@ const BodySchema = z.object({
   target_token_address: z.string().optional(),
   target_chain_id: z.union([z.string(), z.number()]).optional(),
   turnstileToken: z.string().optional(),
+  payoutDestinationTag: z.string().optional(),
 });
 
 function isOpenStatus(status: unknown): boolean {
@@ -57,8 +62,22 @@ export async function POST(req: Request) {
     const raw = await req.json();
     const body = BodySchema.parse(raw);
 
+    const addr = validateWalletAddress(
+      body.walletAddress,
+      shop.token.chainId,
+      shop.token.contract,
+    );
+    if (!addr.ok) {
+      return jsonErr({ message: addr.reason, status: 400 }, 400);
+    }
+
+    const tag = validateDestinationTag(body.payoutDestinationTag);
+    if (!tag.ok) {
+      return jsonErr({ message: tag.reason, status: 400 }, 400);
+    }
+
     const walletRl = await rateLimit(
-      `order:${ip}:${body.walletAddress.toLowerCase()}`,
+      `order:${ip}:${walletStorageKey(addr.normalized, shop.token.chainId)}`,
       RL.order.limit,
       RL.order.windowMs,
     );
@@ -71,15 +90,6 @@ export async function POST(req: Request) {
         },
         429,
       );
-    }
-
-    const addr = validateWalletAddress(
-      body.walletAddress,
-      shop.token.chainId,
-      shop.token.contract,
-    );
-    if (!addr.ok) {
-      return jsonErr({ message: addr.reason, status: 400 }, 400);
     }
 
     const country = shop.countries.list.find((c) => c.code === body.country);
@@ -146,7 +156,12 @@ export async function POST(req: Request) {
 
     // Idempotency: reuse open onramp from last 5 min with same amount/currency
     try {
-      const existing = await listTransactions(addr.normalized, 10, morapayCtx);
+      const existing = await listTransactions(
+        addr.normalized,
+        10,
+        morapayCtx,
+        shop.token.chainId,
+      );
       const items = Array.isArray(existing)
         ? existing
         : ((existing as { items?: unknown[] })?.items ?? []);
@@ -191,6 +206,7 @@ export async function POST(req: Request) {
       referral_code: referral,
       turnstileToken: body.turnstileToken,
       payment_method: body.methodKind,
+      ...(tag.value != null ? { payout_destination_tag: tag.value } : {}),
     };
 
     const initiated = await initiateOnramp(initiateBody, morapayCtx);

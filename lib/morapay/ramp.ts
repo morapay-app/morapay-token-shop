@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { walletAddressesEqual } from "@/lib/validate/address";
 import { morapayFetch } from "./client";
 import { merchantSigningEnabled } from "./merchant-config";
 
@@ -317,12 +318,13 @@ export type InitiateOnrampBody = {
   referral_code?: string;
   turnstileToken?: string;
   payment_method?: "mobile_money" | "bank_transfer" | "bank" | "card";
+  /** XRPL destination tag for exchange / tagged receive addresses */
+  payout_destination_tag?: number;
 };
 
-export async function initiateOnramp(
+export function buildInitiateOnrampPayload(
   body: InitiateOnrampBody,
-  ctx: MorapayCallContext = {},
-) {
+): Record<string, unknown> {
   const paymentMethod =
     body.payment_method === "bank_transfer" || body.payment_method === "bank"
       ? "bank"
@@ -348,6 +350,21 @@ export async function initiateOnramp(
     referralCode: body.referral_code,
     turnstileToken: body.turnstileToken,
     shopId: process.env.SHOP_ID,
+  };
+
+  if (body.payout_destination_tag != null) {
+    payload.payoutDestinationTag = body.payout_destination_tag;
+  }
+
+  return payload;
+}
+
+export async function initiateOnramp(
+  body: InitiateOnrampBody,
+  ctx: MorapayCallContext = {},
+) {
+  const payload: Record<string, unknown> = {
+    ...buildInitiateOnrampPayload(body),
     clientIp: ctx.buyerIp,
   };
 
@@ -441,6 +458,7 @@ export async function listTransactions(
   walletAddress: string,
   limit = 10,
   ctx: MorapayCallContext = {},
+  chainId?: number,
 ) {
   const data = await morapayFetch<unknown>(`${MERCHANT_RAMP}/transactions`, {
     searchParams: { limit: String(limit), wallet_address: walletAddress },
@@ -451,12 +469,13 @@ export async function listTransactions(
   const items = Array.isArray(data) ? data : (envelope.items ?? envelope.data ?? []);
   return (items as Record<string, unknown>[])
     .map(normalizeTransaction)
-    .filter(
-      (tx) =>
-        !walletAddress ||
-        String(tx.wallet_address ?? tx.destinationWallet ?? "").toLowerCase() ===
-          walletAddress.toLowerCase(),
-    );
+    .filter((tx) => {
+      if (!walletAddress) return true;
+      const txWallet = String(tx.wallet_address ?? tx.destinationWallet ?? "");
+      return chainId != null
+        ? walletAddressesEqual(txWallet, walletAddress, chainId)
+        : txWallet.toLowerCase() === walletAddress.toLowerCase();
+    });
 }
 
 export async function initiateOfframp(
@@ -484,10 +503,16 @@ export async function initiateOfframp(
     { method: "POST", body: payload, timeoutMs: 60_000, buyerIp: ctx.buyerIp },
   );
   const deposit = data.deposit as Record<string, unknown> | undefined;
+  const depositDestinationTag =
+    deposit?.destinationTag ??
+    deposit?.destination_tag ??
+    data.depositDestinationTag ??
+    data.deposit_destination_tag;
   return {
     ...data,
     merchantReference: data.reference ?? data.merchantReference,
     depositAddress: deposit?.address ?? data.depositAddress,
+    depositDestinationTag,
   } as Record<string, unknown>;
 }
 
@@ -497,12 +522,20 @@ export async function confirmOfframp(
   ctx: MorapayCallContext = {},
 ) {
   const tx = await getTransaction(ref, body.wallet_address, ctx);
+  const deposit = tx.deposit as Record<string, unknown> | undefined;
+  const depositDestinationTag =
+    tx.depositDestinationTag ??
+    tx.deposit_destination_tag ??
+    deposit?.destinationTag ??
+    deposit?.destination_tag;
   return {
     ...tx,
     depositAddress:
-      tx.depositAddress ?? tx.deposit_address ?? (tx.deposit as { address?: string })?.address,
+      tx.depositAddress ?? tx.deposit_address ?? deposit?.address,
     deposit_address:
       tx.deposit_address ?? tx.depositAddress,
+    depositDestinationTag,
+    deposit_destination_tag: depositDestinationTag,
   };
 }
 
@@ -525,8 +558,34 @@ export function isTokenSupported(
   const needle = tokenAddress.toLowerCase();
   return config.supportedOnrampTargets.some(
     (t) =>
-      t.chainId === chainId && t.tokenAddress.toLowerCase() === needle,
+      t.chainId === chainId &&
+      t.tokenAddress.toLowerCase() === needle,
   );
+}
+
+export function parseOfframpDepositInfo(confirmed: Record<string, unknown>): {
+  depositAddress: string;
+  depositDestinationTag: number | string | undefined;
+} {
+  const deposit = confirmed.deposit as Record<string, unknown> | undefined;
+  const depositAddress = String(
+    confirmed.depositAddress ??
+      confirmed.deposit_address ??
+      deposit?.address ??
+      "",
+  );
+  const rawTag =
+    confirmed.depositDestinationTag ??
+    confirmed.deposit_destination_tag ??
+    deposit?.destinationTag ??
+    deposit?.destination_tag;
+  const depositDestinationTag =
+    rawTag == null || rawTag === ""
+      ? undefined
+      : typeof rawTag === "number" || typeof rawTag === "string"
+        ? rawTag
+        : undefined;
+  return { depositAddress, depositDestinationTag };
 }
 
 export { merchantSigningEnabled };

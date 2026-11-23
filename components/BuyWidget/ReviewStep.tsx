@@ -10,6 +10,7 @@ type Props = {
   methodId: string;
   phone: string;
   wallet: string;
+  payoutDestinationTag?: string;
   chainId: number;
   accepted: boolean;
   submitting: boolean;
@@ -74,6 +75,12 @@ export function ReviewStep(props: Props) {
           <dt className="text-[var(--mp-text-muted)]">Chain</dt>
           <dd>{chain?.name ?? props.chainId}</dd>
         </div>
+        {props.payoutDestinationTag ? (
+          <div className="flex justify-between gap-2">
+            <dt className="text-[var(--mp-text-muted)]">Dest. tag</dt>
+            <dd className="font-mono">{props.payoutDestinationTag}</dd>
+          </div>
+        ) : null}
       </dl>
 
       <label className="flex items-start gap-3 text-sm">

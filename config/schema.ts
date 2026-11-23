@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getChain } from "./chains";
 
 const hexColor = z.string().regex(/^#([0-9a-f]{6})$/i);
 
@@ -167,6 +168,26 @@ export const ShopConfigSchema = z
         message: "telegram.deskUrl is required",
         path: ["telegram", "deskUrl"],
       });
+    }
+
+    const chain = getChain(cfg.token.chainId);
+    const contract = cfg.token.contract;
+    if (chain?.kind === "evm") {
+      if (!/^0x[a-fA-F0-9]{40}$/.test(contract)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "EVM token.contract must be a 0x-prefixed 20-byte hex address",
+          path: ["token", "contract"],
+        });
+      }
+    } else if (chain?.kind === "xrpl") {
+      if (contract.toLowerCase() !== "xrp") {
+        ctx.addIssue({
+          code: "custom",
+          message: "XRPL native asset token.contract must be \"xrp\"",
+          path: ["token", "contract"],
+        });
+      }
     }
   });
 

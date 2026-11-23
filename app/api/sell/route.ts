@@ -4,6 +4,7 @@ import {
   getQuote,
   initiateOfframp,
   confirmOfframp,
+  parseOfframpDepositInfo,
 } from "@/lib/morapay/ramp";
 import { getShopConfig, getHealth } from "@/lib/shop-runtime";
 import { jsonOk, jsonErr } from "@/lib/api-response";
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
         inputCurrency: shop.token.ticker,
         outputCurrency: body.currency,
         chain: String(shop.token.chainId),
+        tokenAddress: shop.token.contract,
       },
       morapayCtx,
     );
@@ -111,12 +113,8 @@ export async function POST(req: Request) {
       morapayCtx,
     );
 
-    const depositAddress = String(
-      confirmed.depositAddress ??
-        confirmed.deposit_address ??
-        (confirmed.deposit as { address?: string } | undefined)?.address ??
-        "",
-    );
+    const { depositAddress, depositDestinationTag } =
+      parseOfframpDepositInfo(confirmed);
 
     // Safety: refuse if deposit address equals token contract
     if (
@@ -136,6 +134,7 @@ export async function POST(req: Request) {
     return jsonOk({
       ref,
       depositAddress,
+      depositDestinationTag,
       wallet: addr.normalized,
       raw: confirmed,
     });

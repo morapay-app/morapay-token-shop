@@ -6,6 +6,7 @@ import {
 } from "@/config/schema";
 import milan from "@/examples/milan.config";
 import wikicat from "@/examples/wikicat.config";
+import xrp from "@/examples/xrp.config";
 
 function base(): ShopConfigInput {
   return structuredClone(milan) as ShopConfigInput;
@@ -56,5 +57,17 @@ describe("config schema", () => {
 
   it("WikiCat example has clean copy", () => {
     expect(lintShopConfig(wikicat)).toEqual([]);
+  });
+
+  it("accepts the XRP example with native contract id", () => {
+    const r = ShopConfigSchema.safeParse(xrp);
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects wrong native contract on XRPL", () => {
+    const cfg = structuredClone(xrp) as ShopConfigInput;
+    cfg.token.contract = "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+    const r = ShopConfigSchema.safeParse(cfg);
+    expect(r.success).toBe(false);
   });
 });

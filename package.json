@@ -26,6 +26,7 @@
     "qrcode.react": "^4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "ripple-address-codec": "^5.0.1",
     "viem": "^2.57.20",
     "zod": "^4.6.7"
   },
@@ -62,6 +63,6 @@
     ]
   },
   "license": "MIT",
-  "description": "Cloneable Morapay token shop \u2014 buy tokens with mobile money or bank",
+  "description": "Cloneable Morapay token shop — buy tokens with mobile money or bank",
   "packageManager": "pnpm@10.33.4"
 }

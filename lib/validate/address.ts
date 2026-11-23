@@ -1,5 +1,12 @@
 import { getAddress, isAddress } from "viem";
 import bs58 from "bs58";
+import {
+  decodeAccountID,
+  decodeXAddress,
+  encodeAccountID,
+  isValidClassicAddress,
+  isValidXAddress,
+} from "ripple-address-codec";
 import { getChain } from "@/config/chains";
 
 export type AddressValidation =
@@ -7,6 +14,49 @@ export type AddressValidation =
   | { ok: false; reason: string };
 
 const ZERO = "0x0000000000000000000000000000000000000000";
+
+function normalizeClassicXrplAddress(address: string): string | null {
+  try {
+    return encodeAccountID(decodeAccountID(address));
+  } catch {
+    return null;
+  }
+}
+
+function normalizeXrplAddress(trimmed: string): string | null {
+  if (isValidClassicAddress(trimmed)) {
+    return normalizeClassicXrplAddress(trimmed);
+  }
+  if (isValidXAddress(trimmed)) {
+    try {
+      const decoded = decodeXAddress(trimmed);
+      if (decoded.test) return null;
+      return encodeAccountID(decoded.accountId);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** Normalised key for rate limits / lookups (EVM lowercase, XRPL canonical). */
+export function walletStorageKey(address: string, chainId: number): string {
+  const chain = getChain(chainId);
+  if (chain?.kind === "evm") return address.toLowerCase();
+  return address;
+}
+
+export function walletAddressesEqual(
+  a: string,
+  b: string,
+  chainId: number,
+): boolean {
+  const chain = getChain(chainId);
+  if (chain?.kind === "evm") {
+    return a.toLowerCase() === b.toLowerCase();
+  }
+  return a === b;
+}
 
 export function validateWalletAddress(
   address: string,
@@ -64,6 +114,27 @@ export function validateWalletAddress(
     } catch {
       return { ok: false, reason: "Enter a valid Solana address." };
     }
+  }
+
+  if (chain.kind === "xrpl") {
+    const normalized = normalizeXrplAddress(trimmed);
+    if (!normalized) {
+      return {
+        ok: false,
+        reason:
+          "Enter a valid XRPL address (classic r… or mainnet X-address). Testnet X-addresses are not supported.",
+      };
+    }
+    if (
+      tokenContract &&
+      normalized.toLowerCase() === tokenContract.toLowerCase()
+    ) {
+      return {
+        ok: false,
+        reason: "Do not enter the native asset id. Use your own wallet.",
+      };
+    }
+    return { ok: true, normalized };
   }
 
   return { ok: false, reason: "Unsupported chain for address validation." };
