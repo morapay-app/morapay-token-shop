@@ -15,6 +15,7 @@ import { SetupRequired } from "@/components/SetupRequired";
 import { track } from "@/lib/analytics";
 import { WAIT_TOTAL_MS } from "@/lib/wait-phases";
 import { quoteClientMessage } from "@/lib/quote-client-message";
+import { useQuoteRateLock } from "./useQuoteRateLock";
 
 type ShopApiConfig = {
   token: {
@@ -188,17 +189,14 @@ export function BuyWidget() {
     };
   }, [state.amount, state.currency, fetchQuote]);
 
-  // Refresh quote every 30s or on expiry
-  useEffect(() => {
-    if (!state.quote) return;
-    const expires = Date.parse(state.quote.expiresAt);
-    const untilExpiry = Math.max(1_000, expires - Date.now() - 1_000);
-    const t = setTimeout(
-      () => void fetchQuote(state.amount, state.currency),
-      Math.min(untilExpiry, 30_000),
-    );
-    return () => clearTimeout(t);
-  }, [state.quote, state.amount, state.currency, fetchQuote]);
+  const rateLockPaused = state.step === "submitting";
+
+  const rateLockSeconds = useQuoteRateLock({
+    quoteId: state.quote?.quoteId ?? null,
+    enabled: state.step === "amount" && !!state.quote && Number(state.amount) > 0,
+    paused: rateLockPaused,
+    onRefresh: () => void fetchQuote(state.amount, state.currency),
+  });
 
   const markWaitTimedOut = useCallback(() => {
     dispatch({
@@ -427,6 +425,7 @@ export function BuyWidget() {
             track("country_changed", { code });
           }}
           onNext={() => dispatch({ type: "GOTO", step: "payment" })}
+          rateLockSeconds={rateLockSeconds}
         />
       )}
 

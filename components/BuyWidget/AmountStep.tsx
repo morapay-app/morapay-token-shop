@@ -18,6 +18,7 @@ type Props = {
   onAmount: (v: string) => void;
   onCountry: (code: string, currency: string) => void;
   onNext: () => void;
+  rateLockSeconds?: number;
 };
 
 export function AmountStep(props: Props) {
@@ -27,9 +28,8 @@ export function AmountStep(props: Props) {
     (amountNum >= props.limits.minFiat && amountNum <= props.limits.maxFiat);
   const canNext = amountNum > 0 && within && !!props.quote;
 
-  const lockSec = props.quote
-    ? Math.max(0, Math.floor((Date.parse(props.quote.expiresAt) - Date.now()) / 1000))
-    : 0;
+  const lockSec =
+    props.quote && props.rateLockSeconds != null ? props.rateLockSeconds : 0;
 
   return (
     <div className="space-y-5">
