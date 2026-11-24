@@ -8,7 +8,21 @@ type Props = {
   onWaitTimeout: () => void;
 };
 
+const MTN_TIPS = [
+  "No prompt? Dial *170# → My Wallet → My Approvals.",
+  "Keep your phone unlocked and on signal.",
+  "Have the amount plus MoMo charges in your wallet.",
+  "Never share your PIN or approve prompts you didn't start.",
+];
+
+const GENERIC_TIPS = [
+  "Keep your phone unlocked and on signal.",
+  "Have the amount plus MoMo charges in your wallet.",
+];
+
 export function AwaitingStep(props: Props) {
+  const isMtn = props.network.trim().toUpperCase().startsWith("MTN");
+  const tips = isMtn ? MTN_TIPS : GENERIC_TIPS;
   return (
     <div className="space-y-4 text-center py-4">
       <WaitCountdown
@@ -17,14 +31,16 @@ export function AwaitingStep(props: Props) {
         onTimeout={props.onWaitTimeout}
       />
       <p className="text-sm text-[var(--mp-text-muted)]">
-        Approve the prompt on {props.phone || "your phone"}. Enter your MoMo PIN
-        to complete payment.
+        Approve the prompt on {props.phone || "your phone"} with your MoMo PIN.
       </p>
-      {props.network === "MTN" && (
-        <p className="text-sm text-[var(--mp-text-muted)]">
-          MTN tip: pending approvals are under *170# → My Approvals.
-        </p>
-      )}
+      <div className="subcard p-4 text-left">
+        <p className="text-sm font-semibold">{isMtn ? "MTN tips" : "Tips"}</p>
+        <ul className="mt-2 space-y-1.5 text-sm text-[var(--mp-text-muted)] list-disc pl-5">
+          {tips.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
+        </ul>
+      </div>
       {props.orderRef && (
         <p className="text-xs text-[var(--mp-text-muted)] font-mono">
           Ref {props.orderRef}

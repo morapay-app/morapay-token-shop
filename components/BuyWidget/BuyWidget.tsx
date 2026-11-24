@@ -472,7 +472,7 @@ export function BuyWidget() {
         />
       )}
 
-      {state.step === "review" && state.quote && (
+      {(state.step === "review" || state.step === "submitting") && state.quote && (
         <ReviewStep
           quote={state.quote}
           methodLabel={
@@ -488,18 +488,12 @@ export function BuyWidget() {
           payoutDestinationTag={state.payoutDestinationTag}
           chainId={config.token.chainId}
           accepted={state.acceptedRisk}
-          submitting={false}
+          submitting={state.step === "submitting"}
           showFee={config.fees.showFeeLine}
           onAccept={(v) => dispatch({ type: "SET_RISK", accepted: v })}
           onBack={() => dispatch({ type: "GOTO", step: "wallet" })}
           onConfirm={() => void submitOrder()}
         />
-      )}
-
-      {state.step === "submitting" && (
-        <div className="py-10 text-center">
-          <p className="font-heading font-semibold">Starting your order…</p>
-        </div>
       )}
 
       {state.step === "awaiting_prompt" && waitStartedAt != null && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { QuoteView } from "./machine";
 import { flagFor } from "@/config/countries";
 
@@ -22,6 +23,9 @@ type Props = {
 };
 
 export function AmountStep(props: Props) {
+  // A chip is active only after a tap, and only while the amount still matches it.
+  const [chip, setChip] = useState<number | null>(null);
+  const activeChip = chip != null && Number(props.amount) === chip ? chip : null;
   const amountNum = Number(props.amount || 0);
   const within =
     !props.limits ||
@@ -65,9 +69,10 @@ export function AmountStep(props: Props) {
           inputMode="decimal"
           className="field font-numbers text-3xl"
           value={props.amount}
-          onChange={(e) =>
-            props.onAmount(e.target.value.replace(/[^\d.]/g, ""))
-          }
+          onChange={(e) => {
+            setChip(null);
+            props.onAmount(e.target.value.replace(/[^\d.]/g, ""));
+          }}
           placeholder={props.limits ? String(props.limits.minFiat) : "0"}
           aria-describedby="amount-hint"
         />
@@ -78,13 +83,21 @@ export function AmountStep(props: Props) {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Quick amounts">
         {props.quickAmounts.map((q) => (
           <button
             key={q}
             type="button"
-            className="pill bg-[var(--mp-pill-inactive)] text-[var(--mp-pill-inactive-text)] text-sm px-3 py-2 min-h-11"
-            onClick={() => props.onAmount(String(q))}
+            aria-pressed={activeChip === q}
+            className={`pill text-sm px-3 py-2 min-h-11 ${
+              activeChip === q
+                ? "bg-[var(--mp-pill-active)] text-[var(--mp-text)] font-semibold"
+                : "bg-[var(--mp-pill-inactive)] text-[var(--mp-pill-inactive-text)]"
+            }`}
+            onClick={() => {
+              setChip(q);
+              props.onAmount(String(q));
+            }}
           >
             {q}
           </button>
