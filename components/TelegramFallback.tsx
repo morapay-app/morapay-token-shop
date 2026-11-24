@@ -66,7 +66,7 @@ export function TelegramFallback(props: Props) {
         >
           {props.countries.map((c) => (
             <option key={c.code} value={c.code}>
-              {flagFor(c.code)} {c.code} · {c.currency}
+              {flagFor(c.code)} {c.currency}
             </option>
           ))}
         </select>

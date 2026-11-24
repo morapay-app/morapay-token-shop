@@ -49,7 +49,7 @@ export function AmountStep(props: Props) {
         >
           {props.countries.map((c) => (
             <option key={c.code} value={c.code} disabled={!c.selectable}>
-              {flagFor(c.code)} {c.code} · {c.currency}
+              {flagFor(c.code)} {c.currency}
               {!c.selectable ? " (soon)" : ""}
             </option>
           ))}
