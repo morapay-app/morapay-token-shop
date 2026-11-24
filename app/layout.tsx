@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { shopConfig } from "@/shop.config";
-import { resolveBrandAppleIconPath, resolveBrandFaviconPath } from "@/lib/brand-icon";
+import { resolveBrandMetadataIcons } from "@/lib/brand-icon";
 import { resolveHomeLayoutVariant } from "@/lib/home-layout";
 import { accentForLightText } from "@/lib/contrast";
 import "./globals.css";
@@ -72,11 +72,6 @@ const wikicatDisplay = localFont({
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || shopConfig.siteUrl;
 
-const brandFavicon = resolveBrandFaviconPath(
-  shopConfig.shopId,
-  shopConfig.brand.favicon,
-);
-
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: `Buy $${shopConfig.token.ticker} with Mobile Money or Bank | ${shopConfig.token.name}`,
@@ -94,11 +89,7 @@ export const metadata: Metadata = {
     title: `Buy $${shopConfig.token.ticker}`,
     description: shopConfig.token.description,
   },
-  icons: {
-    icon: brandFavicon,
-    shortcut: brandFavicon,
-    apple: resolveBrandAppleIconPath(shopConfig.shopId, brandFavicon),
-  },
+  icons: resolveBrandMetadataIcons(shopConfig.shopId, shopConfig.brand),
 };
 
 const homeLayout = resolveHomeLayoutVariant(shopConfig);

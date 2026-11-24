@@ -20,6 +20,7 @@ const wikicatConfig = {
     accent: "#6159B5",
     heroBg: "#9DE7F1",
     accentText: "#0A0A0A",
+    favicon: "/brand/wikicat/favicon.ico",
     layoutVariant: "wikicat",
     overridePrimary: true,
     heroImage: "/brand/wikicat/clouds.png",
