@@ -111,7 +111,7 @@ export default function RootLayout({
   const accent = shopConfig.brand.accent;
   const accentText = shopConfig.brand.accentText ?? "#FFFFFF";
   const heroBg = shopConfig.brand.heroBg ?? "#FFFFFF";
-  const accentOnLight = accentForLightText(accent, "#EFEEE2");
+  const accentOnLight = accentForLightText(accent, "#D9DFE2");
   const buttonBg = shopConfig.brand.overridePrimary
     ? accent
     : "var(--mp-button-bg)";
