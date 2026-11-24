@@ -34,6 +34,13 @@ export function TokenInfo() {
           </div>
         </div>
         <p className="text-sm">{shopConfig.token.description}</p>
+        {chain?.kind === "pi" ? (
+          <p className="text-sm text-[var(--mp-warning-text)]">
+            Native {shopConfig.token.ticker} on {chain.name} only. Not a BNB
+            Chain or other wrapped token.
+          </p>
+        ) : (
+        <>
         <div className="subcard p-3">
           <p className="text-xs text-[var(--mp-text-muted)] mb-1">Contract</p>
           <p className="font-mono text-xs break-all">{shopConfig.token.contract}</p>
@@ -60,6 +67,8 @@ export function TokenInfo() {
         <p className="text-sm text-[var(--mp-warning-text)]">
           Only trust this contract address.
         </p>
+        </>
+        )}
       </div>
 
       {shopConfig.altBuyLinks.length > 0 && (

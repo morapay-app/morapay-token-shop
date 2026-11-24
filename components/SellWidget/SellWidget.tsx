@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { shopConfig } from "@/shop.config";
 import { validateWalletAddress } from "@/lib/validate/address";
 import { getChain } from "@/config/chains";
+import { MemoDepositInstructions } from "./MemoDepositInstructions";
 import {
   institutionLabel,
   keepInstitution,
@@ -39,11 +40,14 @@ export function SellWidget() {
     ref: string;
     depositAddress: string;
     depositDestinationTag?: string | number;
+    depositMemo?: string;
+    depositAmount?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const chain = getChain(shopConfig.token.chainId);
   const isXrpl = chain?.kind === "xrpl";
+  const isPi = chain?.kind === "pi";
 
   const amountError = amount ? sellAmountError(amount, shopConfig) : null;
   const institution = institutions.find((i) => i.code === bankCode);
@@ -155,10 +159,16 @@ export function SellWidget() {
         );
         return;
       }
+      if (isPi && !j.data.depositMemo) {
+        setError("Missing deposit memo. Do not send PI. Contact support.");
+        return;
+      }
       setDeposit({
         ref: j.data.ref,
         depositAddress: j.data.depositAddress,
         depositDestinationTag: j.data.depositDestinationTag,
+        depositMemo: j.data.depositMemo,
+        depositAmount: j.data.depositAmount,
       });
     } catch {
       setError("Could not start sell order.");
@@ -168,6 +178,19 @@ export function SellWidget() {
   }
 
   const tagRequired = isXrpl;
+
+  if (deposit && isPi && deposit.depositMemo) {
+    return (
+      <MemoDepositInstructions
+        ticker={shopConfig.token.ticker}
+        networkName={chain?.name ?? "Pi Network"}
+        depositAddress={deposit.depositAddress}
+        depositMemo={deposit.depositMemo}
+        depositAmount={deposit.depositAmount ?? amount}
+        orderRef={deposit.ref}
+      />
+    );
+  }
 
   if (deposit) {
     if (tagRequired && deposit.depositDestinationTag == null) {
@@ -341,14 +364,14 @@ export function SellWidget() {
       </div>
       <div>
         <label htmlFor="sell-wallet" className="label">
-          Your sending wallet
+          {isPi ? "Your sending Pi wallet" : "Your sending wallet"}
         </label>
         <input
           id="sell-wallet"
           className="field font-mono text-sm"
           value={wallet}
           onChange={(e) => setWallet(e.target.value)}
-          placeholder={isXrpl ? "r… or X-address" : undefined}
+          placeholder={isXrpl ? "r… or X-address" : isPi ? "G…" : undefined}
         />
       </div>
       {error && (

@@ -3,6 +3,12 @@ import { walletAddressesEqual } from "@/lib/validate/address";
 import { getChain } from "@/config/chains";
 import { merchantCoreTokenAddress } from "@/lib/morapay/core-token";
 import { morapayFetch } from "./client";
+import {
+  mergeOfframpDeposit,
+  offrampDepositError,
+  parseOfframpDeposit,
+  type OfframpDeposit,
+} from "./offramp-deposit";
 import { merchantSigningEnabled } from "./merchant-config";
 
 export const OnrampTargetSchema = z.object({
@@ -550,17 +556,12 @@ export async function initiateOfframp(
     `${MERCHANT_RAMP}/offramp`,
     { method: "POST", body: payload, timeoutMs: 60_000, buyerIp: ctx.buyerIp },
   );
-  const deposit = data.deposit as Record<string, unknown> | undefined;
-  const depositDestinationTag =
-    deposit?.destinationTag ??
-    deposit?.destination_tag ??
-    data.depositDestinationTag ??
-    data.deposit_destination_tag;
+  const info = parseOfframpDeposit(data);
   return {
     ...data,
     merchantReference: data.reference ?? data.merchantReference,
-    depositAddress: deposit?.address ?? data.depositAddress,
-    depositDestinationTag,
+    ...info,
+    depositAddress: info.depositAddress || undefined,
   } as Record<string, unknown>;
 }
 
@@ -570,20 +571,13 @@ export async function confirmOfframp(
   ctx: MorapayCallContext = {},
 ) {
   const tx = await getTransaction(ref, body.wallet_address, ctx);
-  const deposit = tx.deposit as Record<string, unknown> | undefined;
-  const depositDestinationTag =
-    tx.depositDestinationTag ??
-    tx.deposit_destination_tag ??
-    deposit?.destinationTag ??
-    deposit?.destination_tag;
+  const info = parseOfframpDeposit(tx);
   return {
     ...tx,
-    depositAddress:
-      tx.depositAddress ?? tx.deposit_address ?? deposit?.address,
-    deposit_address:
-      tx.deposit_address ?? tx.depositAddress,
-    depositDestinationTag,
-    deposit_destination_tag: depositDestinationTag,
+    ...info,
+    depositAddress: info.depositAddress || undefined,
+    deposit_address: info.depositAddress || undefined,
+    deposit_destination_tag: info.depositDestinationTag,
   };
 }
 
@@ -604,38 +598,28 @@ export function isTokenSupported(
   tokenAddress: string,
 ): boolean {
   const needle = tokenAddress.toLowerCase();
+  const nativePi = getChain(chainId)?.kind === "pi";
   return config.supportedOnrampTargets.some(
     (t) =>
       t.chainId === chainId &&
-      t.tokenAddress.toLowerCase() === needle,
+      (t.tokenAddress.toLowerCase() === needle ||
+        // Native PI may be listed as "pi", "native" or by symbol only.
+        (nativePi &&
+          (["pi", "native", ""].includes(t.tokenAddress.toLowerCase()) ||
+            t.symbol.toUpperCase() === "PI"))),
   );
 }
 
-export function parseOfframpDepositInfo(confirmed: Record<string, unknown>): {
-  depositAddress: string;
-  depositDestinationTag: number | string | undefined;
-} {
-  const deposit = confirmed.deposit as Record<string, unknown> | undefined;
-  const depositAddress = String(
-    deposit?.address ??
-      confirmed.depositAddress ??
-      confirmed.deposit_address ??
-      "",
-  );
-  const rawTag =
-    deposit?.destinationTag ??
-    deposit?.destination_tag ??
-    confirmed.depositDestinationTag ??
-    confirmed.deposit_destination_tag;
-  const depositDestinationTag =
-    rawTag == null || rawTag === ""
-      ? undefined
-      : typeof rawTag === "number" || typeof rawTag === "string"
-        ? rawTag
-        : undefined;
-  return { depositAddress, depositDestinationTag };
+/** Deposit instructions from a transaction read, gaps filled from the initiate response. */
+export function parseOfframpDepositInfo(
+  confirmed: Record<string, unknown>,
+  initiated?: Record<string, unknown>,
+): OfframpDeposit {
+  const primary = parseOfframpDeposit(confirmed);
+  return initiated ? mergeOfframpDeposit(primary, parseOfframpDeposit(initiated)) : primary;
 }
 
+/** Kept for callers/tests: XRPL check only (other chains return null). */
 export function xrplOfframpDepositError(
   chainId: number,
   info: {
@@ -644,16 +628,7 @@ export function xrplOfframpDepositError(
   },
 ): string | null {
   if (getChain(chainId)?.kind !== "xrpl") return null;
-  if (!info.depositAddress) {
-    return "Missing platform deposit address. Please contact support.";
-  }
-  if (
-    info.depositDestinationTag == null ||
-    String(info.depositDestinationTag).trim() === ""
-  ) {
-    return "Missing deposit destination tag. Do not send XRP until support provides a tag.";
-  }
-  return null;
+  return offrampDepositError(chainId, info);
 }
 
-export { merchantSigningEnabled };
+export { offrampDepositError };

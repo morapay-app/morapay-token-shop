@@ -8,6 +8,7 @@ import {
   isValidXAddress,
 } from "ripple-address-codec";
 import { getChain } from "@/config/chains";
+import { validatePiAddress } from "./pi-address";
 
 export type AddressValidation =
   | { ok: true; normalized: string; embeddedDestinationTag?: number }
@@ -68,6 +69,7 @@ export function walletStorageKey(address: string, chainId: number): string {
   if (chain?.kind === "xrpl") {
     return parseXrplWalletInput(address)?.classicAddress ?? address;
   }
+  if (chain?.kind === "pi") return address.trim().toUpperCase();
   return address;
 }
 
@@ -84,6 +86,9 @@ export function walletAddressesEqual(
     const left = parseXrplWalletInput(a)?.classicAddress ?? a;
     const right = parseXrplWalletInput(b)?.classicAddress ?? b;
     return left === right;
+  }
+  if (chain?.kind === "pi") {
+    return a.trim().toUpperCase() === b.trim().toUpperCase();
   }
   return a === b;
 }
@@ -169,6 +174,10 @@ export function validateWalletAddress(
       normalized: parsed.classicAddress,
       embeddedDestinationTag: parsed.embeddedDestinationTag,
     };
+  }
+
+  if (chain.kind === "pi") {
+    return validatePiAddress(trimmed);
   }
 
   return { ok: false, reason: "Unsupported chain for address validation." };

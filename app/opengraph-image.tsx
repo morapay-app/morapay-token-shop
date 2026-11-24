@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { resolveHomeLayoutVariant } from "@/lib/home-layout";
 import { shopConfig } from "@/shop.config";
 import { XrpOgImage } from "./xrp-og";
+import { PiOgImage } from "./pi-og";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
@@ -10,6 +11,9 @@ export const contentType = "image/png";
 export default function OgImage() {
   if (shopConfig.shopId === "xrp") {
     return new ImageResponse(<XrpOgImage />, { ...size });
+  }
+  if (shopConfig.shopId === "pi") {
+    return new ImageResponse(<PiOgImage />, { ...size });
   }
   const ticker = `$${shopConfig.token.ticker}`;
   const accent = shopConfig.brand.accent;

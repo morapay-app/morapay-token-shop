@@ -62,7 +62,7 @@ export const CountrySchema = z.object({
 
 export const ShopConfigSchema = z
   .object({
-    shopId: z.string().regex(/^[a-z0-9-]{3,40}$/),
+    shopId: z.string().regex(/^[a-z0-9-]{2,40}$/),
     siteUrl: z.string().url(),
     token: z.object({
       name: z.string().min(1),
@@ -188,6 +188,21 @@ export const ShopConfigSchema = z
           code: "custom",
           message: "XRPL native asset token.contract must be \"xrp\"",
           path: ["token", "contract"],
+        });
+      }
+    } else if (chain?.kind === "pi") {
+      if (contract.toLowerCase() !== "pi") {
+        ctx.addIssue({
+          code: "custom",
+          message: "Pi native asset token.contract must be \"pi\"",
+          path: ["token", "contract"],
+        });
+      }
+      if (cfg.token.decimals !== 7) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Pi uses 7 decimals",
+          path: ["token", "decimals"],
         });
       }
     }

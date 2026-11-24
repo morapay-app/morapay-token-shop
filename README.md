@@ -135,6 +135,17 @@ NEXT_PUBLIC_SITE_URL=https://your-ipod-host.example
 
 Same `MORAPAY_MERCHANT_PUBLIC_KEY`, `MORAPAY_MERCHANT_SECRET_KEY`, `MORAPAY_ENV`, and `MORAPAY_API_BASE` as other shops. Verify with `pnpm smoke:ipod` (read-only quotes; no orders).
 
+**Pi** (`examples/pi.config.ts`) — native PI on Pi Network (internal chain `31415926`, contract id `pi`, 7 decimals); same countries and methods as the XRP shop. Buyers enter a G… Pi wallet address (StrKey checksum checked; M… and secret keys refused). Sells show our Pi address, the exact amount and a per-order memo from core (`lib/morapay/offramp-deposit.ts` maps the field names).
+
+### Pi deploy
+
+```bash
+SHOP_ID=pi
+NEXT_PUBLIC_SITE_URL=https://pi.morapay.shop
+```
+
+Same merchant env vars as the XRP shop. `/api/health` reports `tokenSupported: true` only once core lists chain `31415926` on the merchant ramp.
+
 ## Compliance
 
 No investment hype. Risk disclaimer stays visible. Confirm regulatory status before paid ads.

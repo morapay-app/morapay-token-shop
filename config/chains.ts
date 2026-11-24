@@ -2,7 +2,7 @@ export type ChainInfo = {
   chainId: number;
   name: string;
   shortName: string;
-  kind: "evm" | "solana" | "xrpl" | "other";
+  kind: "evm" | "solana" | "xrpl" | "pi" | "other";
   explorerTx: (hash: string) => string;
   explorerAddress: (address: string) => string;
 };
@@ -72,7 +72,18 @@ const chains: Record<number, ChainInfo> = {
     explorerTx: (h) => `https://livenet.xrpl.org/transactions/${h}`,
     explorerAddress: (a) => `https://livenet.xrpl.org/accounts/${a}`,
   },
+  /** Pi Network mainnet (Stellar protocol, G… accounts, text memos). Internal id used by Morapay core. */
+  31415926: {
+    chainId: 31415926,
+    name: "Pi Network",
+    shortName: "Pi",
+    kind: "pi",
+    explorerTx: (h) => `https://blockexplorer.minepi.com/mainnet/transactions/${h}`,
+    explorerAddress: (a) => `https://blockexplorer.minepi.com/mainnet/accounts/${a}`,
+  },
 };
+
+export const PI_CHAIN_ID = 31415926;
 
 export function getChain(chainId: number): ChainInfo | undefined {
   return chains[chainId];

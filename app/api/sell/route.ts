@@ -5,8 +5,8 @@ import {
   getQuote,
   initiateOfframp,
   confirmOfframp,
+  offrampDepositError,
   parseOfframpDepositInfo,
-  xrplOfframpDepositError,
 } from "@/lib/morapay/ramp";
 import { getShopConfig, getHealth } from "@/lib/shop-runtime";
 import { sellAmountError, shopCurrencies } from "@/lib/sell";
@@ -129,15 +129,13 @@ export async function POST(req: Request) {
       morapayCtx,
     );
 
-    const { depositAddress, depositDestinationTag } =
-      parseOfframpDepositInfo(confirmed);
+    // Pi memos come back on the initiate response; the transaction read may not echo them.
+    const deposit = parseOfframpDepositInfo(confirmed, initiated);
+    const { depositAddress, depositDestinationTag } = deposit;
 
-    const xrplDepositErr = xrplOfframpDepositError(shop.token.chainId, {
-      depositAddress,
-      depositDestinationTag,
-    });
-    if (xrplDepositErr) {
-      return jsonErr({ message: xrplDepositErr, status: 502 }, 502);
+    const depositErr = offrampDepositError(shop.token.chainId, deposit);
+    if (depositErr) {
+      return jsonErr({ message: depositErr, status: 502 }, 502);
     }
 
     // Safety: refuse if deposit address equals token contract
@@ -159,6 +157,9 @@ export async function POST(req: Request) {
       ref,
       depositAddress,
       depositDestinationTag,
+      depositMemo: deposit.depositMemo,
+      depositAmount: deposit.depositAmount ?? body.tokenAmount,
+      depositExpiresAt: deposit.depositExpiresAt,
       wallet: addr.normalized,
       payout: { amount: quote.output.amount, currency: quote.output.currency },
     });

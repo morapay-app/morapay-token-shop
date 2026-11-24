@@ -104,14 +104,18 @@ export function WalletStep(props: Props) {
       ? "Solana address"
       : chain?.kind === "xrpl"
         ? "r… or X-address"
-        : "0x…";
+        : chain?.kind === "pi"
+          ? "G…"
+          : "0x…";
 
   return (
     <div className="space-y-5">
       <h2 className="font-heading text-xl font-bold">Wallet</h2>
       <div>
         <label htmlFor="wallet" className="label">
-          Your {chain?.name ?? "chain"} wallet address
+          {chain?.kind === "pi"
+            ? "Pi wallet address"
+            : `Your ${chain?.name ?? "chain"} wallet address`}
         </label>
         <div className="flex gap-2">
           <input
@@ -130,9 +134,22 @@ export function WalletStep(props: Props) {
           </button>
         </div>
         <p id="wallet-help" className="text-sm text-[var(--mp-text-muted)] mt-2">
-          {chain?.kind === "xrpl"
-            ? "Use your XRPL classic address (r…) or mainnet X-address. Exchanges often require a destination tag below."
-            : "Find this in Trust Wallet, Binance Wallet, or MetaMask under Receive."}
+          {chain?.kind === "xrpl" ? (
+            "Use your XRPL classic address (r…) or mainnet X-address. Exchanges often require a destination tag below."
+          ) : chain?.kind === "pi" ? (
+            <>
+              Must be a Pi Network wallet (starts with G), not PI on BNB or
+              another chain.{" "}
+              <span
+                className="underline decoration-dotted cursor-help"
+                title="Open the Pi Wallet app and tap Receive to copy your G… address. PI sent to a BNB Chain or exchange deposit address for another network can't be recovered."
+              >
+                Where?
+              </span>
+            </>
+          ) : (
+            "Find this in Trust Wallet, Binance Wallet, or MetaMask under Receive."
+          )}
         </p>
         {validation && !validation.ok && (
           <p className="text-sm text-[var(--mp-warning-text)] mt-2" role="alert">

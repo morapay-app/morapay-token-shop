@@ -23,7 +23,7 @@ async function main() {
   const name = await ask(rl, "Token name", ticker);
   const chainId = await ask(
     rl,
-    "chainId (56=BSC, 101=Solana, 144=XRPL native XRP)",
+    "chainId (56=BSC, 101=Solana, 144=XRPL native XRP, 31415926=Pi Network native PI)",
     "56",
   );
   const contract = await ask(rl, "Token contract / mint");
