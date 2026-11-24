@@ -1,103 +1,91 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Receipt } from "@/components/Receipt";
+import type { OrderReceipt } from "@/lib/morapay/receipt";
+import type { RampPhase } from "@/lib/morapay/status";
+
+const LABEL: Record<RampPhase, string> = {
+  in_progress: "Waiting for payment",
+  delivering: "Payment received, delivering",
+  completed: "Delivered",
+  failed: "Failed",
+  cancelled: "Cancelled",
+  delayed: "Delivery delayed",
+};
+
+const FINAL: RampPhase[] = ["completed", "failed", "cancelled"];
+
+/** The wallet is known only on the device that placed the order; the server never returns it. */
+function walletFor(orderRef: string): string | null {
+  try {
+    const saved = JSON.parse(localStorage.getItem("mp_order") ?? "null") as {
+      ref?: string;
+      wallet?: string;
+    } | null;
+    return saved?.ref === orderRef ? (saved.wallet ?? null) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function OrderStatusClient({ orderRef }: { orderRef: string }) {
-  const [wallet, setWallet] = useState("");
-  const [phase, setPhase] = useState<string | null>(null);
-  const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
+  const [wallet, setWallet] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("mp_order");
-      if (raw) {
-        const parsed = JSON.parse(raw) as { ref?: string; wallet?: string };
-        if (parsed.wallet) setWallet(parsed.wallet);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!wallet) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
-
-    const tick = () => {
-      void fetch(
-        `/api/orders/${encodeURIComponent(orderRef)}?wallet_address=${encodeURIComponent(wallet)}`,
-      )
-        .then((r) => r.json())
-        .then((j) => {
-          if (cancelled) return;
-          if (!j.success) {
-            setError(j.message);
-            return;
-          }
-          setPhase(j.data.phase);
-          setExplorerUrl(j.data.explorerUrl ?? null);
-          setMessage(j.data.message ?? null);
-          if (
-            j.data.phase !== "completed" &&
-            j.data.phase !== "failed" &&
-            j.data.phase !== "cancelled"
-          ) {
-            timer = setTimeout(tick, 4000);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) timer = setTimeout(tick, 4000);
-        });
+    const tick = async () => {
+      try {
+        const j = await (await fetch(`/api/orders/${encodeURIComponent(orderRef)}`)).json();
+        if (cancelled) return;
+        if (!j.success) {
+          setError(j.message ?? "Order not found.");
+          return;
+        }
+        setWallet(walletFor(orderRef));
+        setError(null);
+        setReceipt(j.data.receipt);
+        setMessage(j.data.message ?? null);
+        if (FINAL.includes(j.data.phase)) return;
+      } catch {
+        if (cancelled) return;
+      }
+      timer = setTimeout(() => void tick(), 5000);
     };
-
-    tick();
+    void tick();
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [orderRef, wallet]);
+  }, [orderRef]);
 
-  return (
-    <div className="card p-5 space-y-4">
-      <p className="font-mono text-sm break-all">{orderRef}</p>
-      {!wallet && (
-        <div>
-          <label htmlFor="order-wallet" className="label">
-            Wallet used for this order
-          </label>
-          <input
-            id="order-wallet"
-            className="field font-mono text-sm"
-            value={wallet}
-            onChange={(e) => setWallet(e.target.value)}
-            placeholder="0x…"
-          />
-        </div>
-      )}
-      {phase && (
-        <p className="font-heading font-semibold capitalize">
-          {phase.replace("_", " ")}
-        </p>
-      )}
-      {message && <p className="text-sm text-[var(--mp-text-muted)]">{message}</p>}
-      {explorerUrl && (
-        <a
-          className="btn-primary"
-          href={explorerUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          View transaction
-        </a>
-      )}
-      {error && (
+  if (error) {
+    return (
+      <div className="card p-5">
         <p className="text-sm text-[var(--mp-warning-text)]" role="alert">
           {error}
         </p>
-      )}
+      </div>
+    );
+  }
+  if (!receipt) return <div className="card p-6 skeleton h-40" aria-label="Loading order" />;
+  if (receipt.phase === "completed") return <Receipt receipt={receipt} wallet={wallet} />;
+
+  return (
+    <div className="card p-5 space-y-2">
+      <p className="font-heading text-xl font-bold">{LABEL[receipt.phase]}</p>
+      {message ? <p className="text-sm text-[var(--mp-text-muted)]">{message}</p> : null}
+      {receipt.paid ? (
+        <p className="text-sm">
+          {receipt.paid.amount} {receipt.paid.currency}
+          {receipt.received ? ` → ≈ ${receipt.received.amount} ${receipt.received.currency}` : ""}
+        </p>
+      ) : null}
+      <p className="font-mono text-xs break-all text-[var(--mp-text-muted)]">{receipt.ref}</p>
     </div>
   );
 }

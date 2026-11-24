@@ -23,8 +23,8 @@ export async function POST(
     }
     const { ref } = await ctx.params;
     const body = BodySchema.parse(await req.json());
-    const data = await hubForward(ref, body, { buyerIp: clientIp(req.headers) });
-    return jsonOk(data);
+    await hubForward(ref, body, { buyerIp: clientIp(req.headers) });
+    return jsonOk({ ok: true });
   } catch (err) {
     return jsonErr(err, 502);
   }

@@ -1,3 +1,5 @@
+import type { OrderReceipt } from "@/lib/morapay/receipt";
+
 export type BuyStep =
   | "amount"
   | "payment"
@@ -45,8 +47,7 @@ export type BuyState = {
   error: string | null;
   errorCode: string | null;
   retryAfterSec: number | null;
-  txHash: string | null;
-  explorerUrl: string | null;
+  receipt: OrderReceipt | null;
   fallback: boolean;
   showNameField: boolean;
 };
@@ -79,7 +80,7 @@ export type BuyAction =
       retryAfterSec?: number;
       backToPayment?: boolean;
     }
-  | { type: "STATUS"; phase: string; txHash?: string; explorerUrl?: string; message?: string }
+  | { type: "STATUS"; phase: string; receipt?: OrderReceipt; message?: string }
   | { type: "ENABLE_FALLBACK" };
 
 export const initialBuyState = (country: string, currency: string): BuyState => ({
@@ -102,8 +103,7 @@ export const initialBuyState = (country: string, currency: string): BuyState => 
   error: null,
   errorCode: null,
   retryAfterSec: null,
-  txHash: null,
-  explorerUrl: null,
+  receipt: null,
   fallback: false,
   showNameField: false,
 });
@@ -183,8 +183,7 @@ export function buyReducer(state: BuyState, action: BuyAction): BuyState {
         return {
           ...state,
           step: "completed",
-          txHash: action.txHash ?? null,
-          explorerUrl: action.explorerUrl ?? null,
+          receipt: action.receipt ?? null,
         };
       }
       if (action.phase === "failed" || action.phase === "cancelled") {

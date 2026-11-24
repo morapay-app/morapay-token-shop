@@ -217,7 +217,7 @@ export function BuyWidget() {
     const interval = elapsed > 2 * 60_000 ? 10_000 : 4_000;
 
     void fetch(
-      `/api/orders/${encodeURIComponent(state.ref)}?wallet_address=${encodeURIComponent(state.wallet)}`,
+      `/api/orders/${encodeURIComponent(state.ref)}`,
     )
       .then((r) => r.json())
       .then((j) => {
@@ -225,8 +225,7 @@ export function BuyWidget() {
         dispatch({
           type: "STATUS",
           phase: j.data.phase,
-          txHash: j.data.txHash,
-          explorerUrl: j.data.explorerUrl,
+          receipt: j.data.receipt,
           message: j.data.message,
         });
         if (j.data.phase === "completed") track("order_completed", { ref: state.ref! });
@@ -525,8 +524,8 @@ export function BuyWidget() {
         <StatusStep
           step={state.step}
           orderRef={state.ref}
-          txHash={state.txHash}
-          explorerUrl={state.explorerUrl}
+          receipt={state.receipt}
+          wallet={state.wallet}
           error={
             state.step === "still_processing"
               ? state.error ??
@@ -534,8 +533,6 @@ export function BuyWidget() {
               : state.error
           }
           retryAfterSec={state.retryAfterSec}
-          ticker={config.token.ticker}
-          contract={config.token.contract}
           deskUrl={config.telegram.deskUrl}
           waitStartedAt={waitStartedAt}
           onWaitTimeout={markWaitTimedOut}

@@ -12,6 +12,8 @@ export type TransactionLike = {
   distributionStatus?: string | null;
   settlementMode?: string | null;
   txHash?: string | null;
+  /** Merchant API shape: the delivery leg is nested. */
+  delivery?: { status?: string | null; txHash?: string | null } | null;
   errorMessage?: string | null;
 };
 
@@ -26,6 +28,7 @@ export function interpretStatus(tx: TransactionLike): {
   const status = (tx.status ?? "").toUpperCase();
   const delivery = (
     tx.deliveryStatus ??
+    tx.delivery?.status ??
     tx.distributionStatus ??
     "NONE"
   ).toUpperCase();
@@ -65,6 +68,6 @@ export function interpretStatus(tx: TransactionLike): {
 
   return {
     phase: "completed",
-    txHash: tx.txHash ?? undefined,
+    txHash: tx.txHash ?? tx.delivery?.txHash ?? undefined,
   };
 }

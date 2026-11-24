@@ -1,17 +1,17 @@
 "use client";
 
 import type { BuyStep } from "./machine";
+import type { OrderReceipt } from "@/lib/morapay/receipt";
+import { Receipt } from "@/components/Receipt";
 import { WaitCountdown } from "./WaitCountdown";
 
 type Props = {
   step: BuyStep;
   orderRef: string | null;
-  txHash: string | null;
-  explorerUrl: string | null;
+  receipt: OrderReceipt | null;
+  wallet: string;
   error: string | null;
   retryAfterSec: number | null;
-  ticker: string;
-  contract: string;
   deskUrl: string;
   waitStartedAt?: number | null;
   onWaitTimeout?: () => void;
@@ -48,41 +48,12 @@ export function StatusStep(props: Props) {
   }
 
   if (props.step === "completed") {
-    return (
-      <div className="space-y-4 text-center py-4">
-        <div className="receipt-card p-5 rounded-[32px]">
-          <h2 className="font-heading text-xl font-bold text-[var(--receipt-text)]">
-            Tokens sent
-          </h2>
-          {props.explorerUrl && props.txHash && (
-            <a
-              className="inline-block mt-3 text-[var(--receipt-accent)] underline break-all"
-              href={props.explorerUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View transaction
-            </a>
-          )}
-        </div>
-        <div className="subcard p-4 text-left text-sm">
-          <p className="font-medium">Add ${props.ticker} to your wallet</p>
-          <p className="font-mono text-xs break-all mt-1">{props.contract}</p>
-        </div>
-        <button
-          type="button"
-          className="btn-ghost"
-          onClick={() => {
-            if (navigator.share && props.explorerUrl) {
-              void navigator.share({
-                title: `Bought $${props.ticker}`,
-                url: props.explorerUrl,
-              });
-            }
-          }}
-        >
-          Share
-        </button>
+    return props.receipt ? (
+      <Receipt receipt={props.receipt} wallet={props.wallet} />
+    ) : (
+      <div className="space-y-2 text-center py-6">
+        <h2 className="font-heading text-xl font-bold">Delivered</h2>
+        <p className="text-xs font-mono text-[var(--mp-text-muted)]">{props.orderRef}</p>
       </div>
     );
   }

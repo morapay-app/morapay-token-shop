@@ -17,7 +17,7 @@ export async function POST(
   try {
     const { ref } = await ctx.params;
     const body = BodySchema.parse(await req.json());
-    const data = await verifyOtp(
+    await verifyOtp(
       {
         wallet_address: body.wallet_address,
         merchant_reference: ref,
@@ -25,7 +25,7 @@ export async function POST(
       },
       { buyerIp: clientIp(req.headers) },
     );
-    return jsonOk(data);
+    return jsonOk({ ok: true });
   } catch (err) {
     return jsonErr(err, 502);
   }
