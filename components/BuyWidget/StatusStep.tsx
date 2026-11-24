@@ -2,6 +2,7 @@
 
 import type { BuyStep } from "./machine";
 import type { OrderReceipt } from "@/lib/morapay/receipt";
+import { OrderProgress, TrackOrderLink, buySteps } from "@/components/OrderProgress";
 import { Receipt } from "@/components/Receipt";
 import { WaitCountdown } from "./WaitCountdown";
 
@@ -12,6 +13,7 @@ type Props = {
   wallet: string;
   error: string | null;
   retryAfterSec: number | null;
+  ticker: string;
   deskUrl: string;
   waitStartedAt?: number | null;
   onWaitTimeout?: () => void;
@@ -33,16 +35,8 @@ export function StatusStep(props: Props) {
             Payment received, delivering tokens…
           </h2>
         )}
-        <ol className="text-left text-sm space-y-2 max-w-xs mx-auto">
-          <li>✓ Payment received</li>
-          <li>→ Buying tokens</li>
-          <li>→ Sending to your wallet</li>
-        </ol>
-        {props.orderRef && (
-          <p className="text-xs font-mono text-[var(--mp-text-muted)]">
-            {props.orderRef}
-          </p>
-        )}
+        <OrderProgress steps={buySteps("delivering", props.ticker)} />
+        <TrackOrderLink orderRef={props.orderRef} />
       </div>
     );
   }

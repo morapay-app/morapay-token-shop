@@ -533,6 +533,7 @@ export function BuyWidget() {
               : state.error
           }
           retryAfterSec={state.retryAfterSec}
+          ticker={config.token.ticker}
           deskUrl={config.telegram.deskUrl}
           waitStartedAt={waitStartedAt}
           onWaitTimeout={markWaitTimedOut}

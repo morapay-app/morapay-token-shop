@@ -1,3 +1,5 @@
+import { OrderProgress, TrackOrderLink, buySteps } from "@/components/OrderProgress";
+import { shopConfig } from "@/shop.config";
 import { WaitCountdown } from "./WaitCountdown";
 
 type Props = {
@@ -41,11 +43,8 @@ export function AwaitingStep(props: Props) {
           ))}
         </ul>
       </div>
-      {props.orderRef && (
-        <p className="text-xs text-[var(--mp-text-muted)] font-mono">
-          Ref {props.orderRef}
-        </p>
-      )}
+      <OrderProgress steps={buySteps("awaiting", shopConfig.token.ticker)} />
+      <TrackOrderLink orderRef={props.orderRef} />
     </div>
   );
 }

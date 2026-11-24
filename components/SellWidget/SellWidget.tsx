@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { shopConfig } from "@/shop.config";
 import { validateWalletAddress } from "@/lib/validate/address";
 import { getChain } from "@/config/chains";
+import { SellTracker } from "./SellTracker";
 import { MemoDepositInstructions } from "./MemoDepositInstructions";
 import {
   institutionLabel,
@@ -181,14 +182,16 @@ export function SellWidget() {
 
   if (deposit && isPi && deposit.depositMemo) {
     return (
-      <MemoDepositInstructions
-        ticker={shopConfig.token.ticker}
-        networkName={chain?.name ?? "Pi Network"}
-        depositAddress={deposit.depositAddress}
-        depositMemo={deposit.depositMemo}
-        depositAmount={deposit.depositAmount ?? amount}
-        orderRef={deposit.ref}
-      />
+      <SellTracker orderRef={deposit.ref} ticker={shopConfig.token.ticker}>
+        <MemoDepositInstructions
+          ticker={shopConfig.token.ticker}
+          networkName={chain?.name ?? "Pi Network"}
+          depositAddress={deposit.depositAddress}
+          depositMemo={deposit.depositMemo}
+          depositAmount={deposit.depositAmount ?? amount}
+          orderRef={deposit.ref}
+        />
+      </SellTracker>
     );
   }
 
@@ -209,8 +212,9 @@ export function SellWidget() {
         : deposit.depositAddress;
 
     return (
+      <SellTracker orderRef={deposit.ref} ticker={shopConfig.token.ticker}>
       <div className="card p-5 space-y-4">
-        <h2 className="font-heading text-xl font-bold">Send tokens</h2>
+        <h2 className="font-heading text-xl font-bold">Send {shopConfig.token.ticker}</h2>
         <p className="text-sm text-[var(--mp-text-muted)]">
           Send exactly {amount} {shopConfig.token.ticker} to the address below
           now. Orders with no deposit are cancelled.
@@ -270,10 +274,8 @@ export function SellWidget() {
             </button>
           </div>
         ) : null}
-        <p className="text-xs font-mono text-[var(--mp-text-muted)]">
-          Ref {deposit.ref}
-        </p>
       </div>
+      </SellTracker>
     );
   }
 

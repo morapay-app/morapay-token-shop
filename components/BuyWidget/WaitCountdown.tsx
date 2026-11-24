@@ -26,7 +26,7 @@ const COPY: Record<
     },
     delivering: {
       title: "Payment received",
-      body: "Buying tokens and sending them to your wallet.",
+      body: "We’re sending it to your wallet.",
     },
   },
   2: {
@@ -36,7 +36,7 @@ const COPY: Record<
     },
     delivering: {
       title: "Still delivering",
-      body: "Token delivery is taking longer than usual. We’re still on it.",
+      body: "Delivery is taking longer than usual. We’re still on it.",
     },
   },
   3: {
@@ -82,7 +82,7 @@ export function WaitCountdown(props: Props) {
           {formatMmSs(progress.remainingMs)}
         </p>
         <p className="text-xs uppercase tracking-wide text-[var(--mp-text-muted)] mt-1">
-          {progress.phase === 1 ? "First check window" : "Extended wait"}
+          {progress.phase === 1 ? "Time left" : "Taking longer"}
         </p>
       </div>
       <div>
