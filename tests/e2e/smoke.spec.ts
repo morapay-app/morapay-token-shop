@@ -2,6 +2,25 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 test.describe("token shop smoke", () => {
+  test("favicon and /favicon.ico match the built shop", async ({ page }) => {
+    await page.goto("/");
+    const iconHref = await page
+      .locator('link[rel="icon"]')
+      .last()
+      .getAttribute("href");
+    expect(iconHref).toBe("/brand/favicon.ico");
+
+    const faviconRes = await page.request.get("/favicon.ico");
+    expect(faviconRes.status()).toBe(200);
+    expect(faviconRes.headers()["content-type"]?.toLowerCase()).toContain(
+      "image",
+    );
+    const shortcutBytes = Buffer.from(await faviconRes.body());
+    const assetRes = await page.request.get(iconHref!);
+    const assetBytes = Buffer.from(await assetRes.body());
+    expect(shortcutBytes.equals(assetBytes)).toBe(true);
+  });
+
   test("buy widget visible at 360px without scrolling past fold", async ({
     page,
   }) => {

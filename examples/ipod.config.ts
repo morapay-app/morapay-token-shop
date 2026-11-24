@@ -23,6 +23,7 @@ const ipodConfig = {
     accent: "#0071E3",
     heroBg: "#F5F5F7",
     accentText: "#FFFFFF",
+    favicon: "/brand/ipod/favicon.ico",
     layoutVariant: "simple",
     overridePrimary: true,
     headline: "Buy $IPOD with mobile money or bank",

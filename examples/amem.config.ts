@@ -20,6 +20,7 @@ const amemConfig = {
     accent: "#FFC830",
     heroBg: "#0A0A0A",
     accentText: "#0A0A0A",
+    favicon: "/brand/favicon.ico",
     overridePrimary: true,
     heroImage: "/brand/amem/coin-web.webp",
     headline: "Buy $AMEM with mobile money or bank",

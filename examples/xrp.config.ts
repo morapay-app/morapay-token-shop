@@ -24,6 +24,7 @@ const xrpConfig = {
     accent: "#2563EB",
     heroBg: "#E0F2FE",
     accentText: "#0F172A",
+    favicon: "/brand/xrp/favicon.ico",
     layoutVariant: "default",
     overridePrimary: true,
     heroImage: "/brand/xrp/hero.svg",
