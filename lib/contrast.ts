@@ -41,7 +41,7 @@ function mixToward(hex: string, toward: string, t: number): string {
  */
 export function accentForLightText(
   accent: string,
-  background = "#EFEEE2",
+  background = "#D9DFE2",
   minRatio = 4.5,
 ): string {
   let color = accent;

@@ -2,13 +2,13 @@
 
 :root {
   /* Morapay base tokens (section 7) */
-  --mp-canvas: #efeee2;
+  --mp-canvas: #d9dfe2;
   --mp-hero: #ffffff;
   --mp-card: #f8f6ec;
   --mp-subcard: #edebdf;
   --mp-divider: #dad6c6;
   --mp-text: #2b0a30;
-  /* Darkened from Morapay #8A8578 for WCAG AA on canvas #EFEEE2 */
+  /* Darkened from Morapay #8A8578 for WCAG AA on canvas (Blue pebble #D9DFE2) */
   --mp-text-muted: #5c574c;
   --mp-text-on-dark: #f8f6ec;
   --mp-pill-active: #38d690;
@@ -589,7 +589,7 @@ select.pill {
   --wikicat-sky: #9de7f1;
   --wikicat-pink: #feb6f5;
   --wikicat-ink: #0a0a0a;
-  --mp-canvas: #ebe8ff;
+  --mp-canvas: #d9dfe2;
   --brand-accent: var(--wikicat-violet);
   --brand-accent-on-light: var(--wikicat-violet);
   --brand-hero-bg: var(--wikicat-violet-soft);
@@ -740,7 +740,7 @@ select.pill {
 
 /* ---- Simple brand hero (IPOD and similar shops) ---- */
 .shop-brand-hero {
-  --mp-canvas: color-mix(in srgb, var(--brand-hero-bg) 35%, #efeee2);
+  --mp-canvas: #d9dfe2;
 }
 
 .shop-brand-hero .brand-hero {
