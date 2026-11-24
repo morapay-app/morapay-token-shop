@@ -1,0 +1,154 @@
+/* Pi shop. Palette mirrored in lib/pi-theme.ts (tested for contrast). */
+.shop-pi {
+  --mp-canvas: #d9dfe2;
+  --mp-hero: #ffffff;
+  --mp-card: #ffffff;
+  --mp-subcard: #f3edfb;
+  --mp-divider: #d8c9ee;
+  --mp-text: #24113f;
+  --mp-text-muted: #574a6b;
+  --mp-pill-active: #f5b942;
+  --mp-pill-inactive: #ebe1f8;
+  --mp-pill-inactive-text: #4b2386;
+  --mp-button-bg: #6b3fa0;
+  --mp-button-text: #ffffff;
+  --mp-warning-bg: #fdeccb;
+  --mp-warning-text: #6e3d00;
+  --brand-accent-on-light: #4b2386;
+  --pi-stage: #2a1052;
+  --pi-stage-deep: #3f1c78;
+  --pi-stage-text: #fff8e8;
+  --pi-stage-muted: #d9c9f2;
+  --pi-gold: #f5b942;
+  --pi-disabled: #d9cdea;
+  --pi-disabled-text: #574a6b;
+  color: var(--mp-text);
+}
+
+.shop-pi .card {
+  border-radius: 20px;
+  color: var(--mp-text);
+}
+
+.shop-pi .receipt-card {
+  color: var(--receipt-text);
+}
+
+.shop-pi .subcard,
+.shop-pi .field,
+.shop-pi .btn-primary {
+  border-radius: 12px;
+}
+
+.shop-pi .btn-primary:disabled {
+  opacity: 1;
+  background: var(--pi-disabled);
+  color: var(--pi-disabled-text);
+}
+
+.shop-pi .pi-header {
+  background: var(--pi-stage);
+  color: var(--pi-stage-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, calc((100% - 62rem) / 2)) 0.75rem;
+}
+
+.shop-pi .pi-header-ticker {
+  color: var(--pi-gold);
+}
+
+.shop-pi .pi-nav-link {
+  color: var(--mp-text);
+}
+
+.shop-pi .pi-stage {
+  background: linear-gradient(170deg, var(--pi-stage) 35%, var(--pi-stage-deep));
+  color: var(--pi-stage-text);
+}
+
+.shop-pi .pi-stage-grid {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2.5rem;
+  display: grid;
+  gap: 1.75rem;
+}
+
+.shop-pi .pi-stage-copy {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 1rem;
+  row-gap: 0.75rem;
+  align-items: center;
+}
+
+.shop-pi .pi-stage-coin {
+  width: 84px;
+  height: 84px;
+}
+
+.shop-pi .pi-stage-title {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.15;
+  font-weight: 800;
+  color: var(--pi-gold);
+  text-wrap: balance;
+}
+
+.shop-pi .pi-stage-sub {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--pi-stage-muted);
+}
+
+.shop-pi .pi-stage-flow {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--pi-gold) 45%, transparent);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.shop-pi .pi-stage-flow li + li::before {
+  content: "→";
+  color: var(--pi-gold);
+  margin-right: 0.5rem;
+}
+
+.shop-pi .pi-stage-buy {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+@media (min-width: 860px) {
+  .shop-pi .pi-stage-grid {
+    grid-template-columns: 1fr 440px;
+    align-items: center;
+    gap: 4rem;
+    padding: 3rem 1rem 4.5rem;
+  }
+
+  .shop-pi .pi-stage-copy {
+    grid-template-columns: 1fr;
+    row-gap: 1.25rem;
+  }
+
+  .shop-pi .pi-stage-coin {
+    width: 148px;
+    height: 148px;
+  }
+
+  .shop-pi .pi-stage-title {
+    font-size: 3rem;
+  }
+}

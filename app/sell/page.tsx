@@ -20,10 +20,16 @@ export default function SellPage() {
           ? "shop-wikicat"
           : variant === "simple"
             ? "shop-brand-hero"
-            : undefined
+            : variant === "pi"
+              ? "shop-pi"
+              : undefined
       }
     >
-      <Header brandHero={variant === "simple"} />
+      <Header
+        brandHero={variant === "simple"}
+        piStage={variant === "pi"}
+        active="sell"
+      />
       <section className="morapay-widget-surface w-full max-w-[480px] mx-auto px-4 py-6">
         <h1 className="font-heading text-3xl font-bold mb-4">
           Sell ${shopConfig.token.ticker}

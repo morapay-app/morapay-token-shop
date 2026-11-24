@@ -6,6 +6,7 @@ import { resolveBrandMetadataIcons } from "@/lib/brand-icon";
 import { resolveHomeLayoutVariant } from "@/lib/home-layout";
 import { accentForLightText } from "@/lib/contrast";
 import "./globals.css";
+import "./pi-theme.css";
 
 // Self-hosted: next/font/google intermittently crashes CI when Google
 // returns extensionless /l/font?kit= URLs (vercel/next.js#99114).

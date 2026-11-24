@@ -1,9 +1,13 @@
 import { shopConfig } from "@/shop.config";
 
+const isPi = shopConfig.shopId === "pi";
+
 const DEFAULT_FAQ = [
   {
     q: "What is this?",
-    a: `A community page where you can buy $${shopConfig.token.ticker} with mobile money or bank transfer, powered by Morapay.`,
+    a: isPi
+      ? "A Morapay shop where you can buy and sell Pi with mobile money or bank transfer. Not affiliated with Pi Network."
+      : `A community page where you can buy $${shopConfig.token.ticker} with mobile money or bank transfer, powered by Morapay.`,
   },
   {
     q: "Do I need an exchange account?",
@@ -11,7 +15,9 @@ const DEFAULT_FAQ = [
   },
   {
     q: "Which wallet do I need?",
-    a: "Any wallet that supports the token’s chain (for BNB Chain: Trust Wallet, Binance Wallet, MetaMask, and others).",
+    a: isPi
+      ? "A Pi Network wallet. Its address starts with G."
+      : "Any wallet that supports the token’s chain (for BNB Chain: Trust Wallet, Binance Wallet, MetaMask, and others).",
   },
   {
     q: "How long does it take?",
@@ -31,7 +37,9 @@ const DEFAULT_FAQ = [
   },
   {
     q: "Who runs this site?",
-    a: `The $${shopConfig.token.ticker} community, using Morapay’s payment service.`,
+    a: isPi
+      ? "Morapay."
+      : `The $${shopConfig.token.ticker} community, using Morapay’s payment service.`,
   },
   {
     q: "How do I get support?",

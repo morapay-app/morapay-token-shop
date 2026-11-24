@@ -5,15 +5,21 @@ export function Header({
   onCulture = false,
   wikiCat = false,
   brandHero = false,
+  piStage = false,
+  active = "buy",
 }: {
   onCulture?: boolean;
   wikiCat?: boolean;
   brandHero?: boolean;
+  piStage?: boolean;
+  active?: "buy" | "sell";
 }) {
   return (
     <header
       className={
-        wikiCat
+        piStage
+          ? "pi-header"
+          : wikiCat
           ? "wikicat-header"
           : brandHero
             ? "brand-hero-header"
@@ -30,7 +36,7 @@ export function Header({
           width={40}
           height={40}
           className={
-            onCulture || wikiCat || brandHero
+            onCulture || wikiCat || brandHero || piStage
               ? "rounded-full"
               : "rounded-full bg-[var(--mp-subcard)]"
           }
@@ -41,7 +47,9 @@ export function Header({
           </p>
           <p
             className={
-              onCulture
+              piStage
+                ? "text-xs pi-header-ticker"
+                : onCulture
                 ? "text-xs opacity-70"
                 : wikiCat
                   ? "text-xs wikicat-header-ticker"
@@ -58,11 +66,14 @@ export function Header({
         <nav className="flex gap-1 bg-[var(--mp-pill-inactive)] p-1 rounded-full">
           <Link
             href="/"
-            className="pill px-3 py-1.5 text-sm bg-[var(--mp-pill-active)]"
+            className={`pill px-3 py-1.5 text-sm ${active === "buy" ? "bg-[var(--mp-pill-active)]" : ""} ${piStage ? "pi-nav-link" : ""}`}
           >
             Buy
           </Link>
-          <Link href="/sell" className="pill px-3 py-1.5 text-sm">
+          <Link
+            href="/sell"
+            className={`pill px-3 py-1.5 text-sm ${active === "sell" ? "bg-[var(--mp-pill-active)]" : ""} ${piStage ? "pi-nav-link" : ""}`}
+          >
             Sell
           </Link>
         </nav>

@@ -1,0 +1,22 @@
+/** Pi shop palette. Mirrored as tokens in app/pi-theme.css; tests keep both equal and WCAG AA. */
+export const PI_THEME = {
+  canvas: "#d9dfe2",
+  stage: "#2a1052",
+  stageDeep: "#3f1c78",
+  stageText: "#fff8e8",
+  stageMuted: "#d9c9f2",
+  gold: "#f5b942",
+  card: "#ffffff",
+  subcard: "#f3edfb",
+  divider: "#d8c9ee",
+  text: "#24113f",
+  textMuted: "#574a6b",
+  pillInactive: "#ebe1f8",
+  pillInactiveText: "#4b2386",
+  button: "#6b3fa0",
+  buttonText: "#ffffff",
+  disabled: "#d9cdea",
+  disabledText: "#574a6b",
+  warningBg: "#fdeccb",
+  warningText: "#6e3d00",
+} as const;

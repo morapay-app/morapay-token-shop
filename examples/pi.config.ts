@@ -25,10 +25,10 @@ const piConfig = {
   },
   brand: {
     accent: "#6B3FA0",
-    heroBg: "#F1EAFB",
+    heroBg: "#2A1052",
     accentText: "#FFFFFF",
     favicon: "/brand/pi/favicon.ico",
-    layoutVariant: "default",
+    layoutVariant: "pi",
     overridePrimary: true,
     heroImage: "/brand/pi/hero.svg",
     headline: "Buy Pi with mobile money or bank",
@@ -105,12 +105,7 @@ const piConfig = {
   },
   attribution: { utmSource: "pi" },
   socials: {},
-  altBuyLinks: [
-    {
-      label: "Pi block explorer",
-      url: "https://blockexplorer.minepi.com/mainnet",
-    },
-  ],
+  altBuyLinks: [],
   faqExtra: [
     {
       q: "Which address should I use?",

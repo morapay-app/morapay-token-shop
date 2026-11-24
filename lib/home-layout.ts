@@ -1,6 +1,6 @@
 import type { ShopConfig } from "@/config/schema";
 
-export type HomeLayoutVariant = "default" | "culture" | "wikicat" | "simple";
+export type HomeLayoutVariant = "default" | "culture" | "wikicat" | "simple" | "pi";
 
 /** Which home shell to render — explicit variant wins over culture stage. */
 export function resolveHomeLayoutVariant(cfg: ShopConfig): HomeLayoutVariant {

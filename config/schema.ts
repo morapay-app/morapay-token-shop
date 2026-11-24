@@ -83,7 +83,7 @@ export const ShopConfigSchema = z
       favicon: z.string().regex(/^\//).optional(),
       /** Home shell: classic hero, AMEM-style culture stage, or WikiCat property theme. */
       layoutVariant: z
-        .enum(["default", "culture", "wikicat", "simple"])
+        .enum(["default", "culture", "wikicat", "simple", "pi"])
         .optional(),
       overridePrimary: z.boolean().default(false),
       headline: z.string().default("Buy ${ticker} with mobile money or bank"),

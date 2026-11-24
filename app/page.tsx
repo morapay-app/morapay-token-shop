@@ -11,6 +11,7 @@ import {
   CultureRail,
   CultureStageBrand,
 } from "@/components/CultureRails";
+import { PiHome } from "@/components/themes/PiHome";
 import { SimpleTokenHome } from "@/components/themes/SimpleTokenHome";
 import { WikiCatHome } from "@/components/themes/WikiCatHome";
 import { resolveHomeLayoutVariant } from "@/lib/home-layout";
@@ -63,6 +64,8 @@ export default function HomePage() {
           ? "shop-wikicat"
           : layoutVariant === "simple"
             ? "shop-brand-hero"
+            : layoutVariant === "pi"
+            ? "shop-pi"
             : culture
             ? "shop-with-culture"
             : undefined
@@ -70,6 +73,8 @@ export default function HomePage() {
     >
       {layoutVariant === "wikicat" ? (
         <WikiCatHome headline={headline} subline={shopConfig.brand.subline} />
+      ) : layoutVariant === "pi" ? (
+        <PiHome headline={headline} subline={shopConfig.brand.subline} />
       ) : layoutVariant === "simple" ? (
         <SimpleTokenHome headline={headline} subline={shopConfig.brand.subline} />
       ) : culture ? (
