@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { QuoteView } from "./machine";
 import { getChain } from "@/config/chains";
 import { maskPhone } from "@/lib/validate/phone";
 
 type Props = {
   quote: QuoteView;
-  methodId: string;
+  /** "MTN MoMo", "Bank transfer". */
+  methodLabel: string;
+  isMobileMoney: boolean;
   phone: string;
   wallet: string;
   payoutDestinationTag?: string;
@@ -25,48 +27,47 @@ function shortAddr(a: string) {
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
 
+function Row(props: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex justify-between gap-2">
+      <dt className="text-[var(--mp-text-muted)]">{props.label}</dt>
+      <dd>{props.children}</dd>
+    </div>
+  );
+}
+
 export function ReviewStep(props: Props) {
   const [clicked, setClicked] = useState(false);
   const chain = getChain(props.chainId);
+  const usdNumber = Number(props.quote.usdValue);
+  const usd =
+    usdNumber > 0
+      ? usdNumber.toLocaleString("en-US", { style: "currency", currency: "USD" })
+      : null;
 
   return (
     <div className="space-y-5">
       <h2 className="font-heading text-xl font-bold">Review</h2>
       <dl className="subcard p-4 space-y-2 text-sm">
-        <div className="flex justify-between gap-2">
-          <dt className="text-[var(--mp-text-muted)]">You pay</dt>
-          <dd className="font-numbers font-bold">
+        <Row label="You pay">
+          <span className="font-numbers font-bold">
             {props.quote.inputAmount} {props.quote.inputCurrency}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-2">
-          <dt className="text-[var(--mp-text-muted)]">You receive</dt>
-          <dd className="font-numbers font-bold">
+          </span>
+        </Row>
+        <Row label="You receive">
+          <span className="font-numbers font-bold">
             {Number(props.quote.outputAmount).toLocaleString(undefined, {
-              maximumFractionDigits: 2,
+              maximumFractionDigits: 6,
             })}{" "}
             {props.quote.outputCurrency}
-          </dd>
-        </div>
-        {props.quote.exchangeRate && (
-          <div className="flex justify-between gap-2">
-            <dt className="text-[var(--mp-text-muted)]">Rate</dt>
-            <dd>{props.quote.exchangeRate}</dd>
-          </div>
-        )}
+          </span>
+        </Row>
+        {usd && <Row label="Value">{usd}</Row>}
         {props.showFee && props.quote.totalFee != null && (
-          <div className="flex justify-between gap-2">
-            <dt className="text-[var(--mp-text-muted)]">Fee</dt>
-            <dd>{String(props.quote.totalFee)}</dd>
-          </div>
+          <Row label="Fee">{String(props.quote.totalFee)}</Row>
         )}
-        <div className="flex justify-between gap-2">
-          <dt className="text-[var(--mp-text-muted)]">Method</dt>
-          <dd>
-            {props.methodId}
-            {props.phone ? ` · ${maskPhone(props.phone)}` : ""}
-          </dd>
-        </div>
+        <Row label={props.isMobileMoney ? "Network" : "Pay with"}>{props.methodLabel}</Row>
+        {props.phone ? <Row label="Number">{maskPhone(props.phone)}</Row> : null}
         <div className="flex justify-between gap-2">
           <dt className="text-[var(--mp-text-muted)]">Wallet</dt>
           <dd className="font-mono">{shortAddr(props.wallet)}</dd>

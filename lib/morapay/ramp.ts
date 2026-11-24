@@ -51,6 +51,8 @@ export const QuoteSchema = z.object({
   quoteId: z.string(),
   expiresAt: z.string(),
   exchangeRate: z.string().optional(),
+  /** Settlement value of the order in US dollars, after fees. */
+  usdValue: z.string().optional(),
   basePrice: z.union([z.string(), z.number()]).optional(),
   input: z.object({
     amount: z.string(),
@@ -247,6 +249,7 @@ export async function getQuote(
       ),
       exchangeRate:
         typeof data.rateLabel === "string" ? data.rateLabel : undefined,
+      ...(data.usdValue != null && String(data.usdValue) !== "" ? { usdValue: String(data.usdValue) } : {}),
       input: {
         amount: String(data.customerAmount ?? data.amount ?? input.inputAmount),
         currency: input.inputCurrency.toUpperCase(),

@@ -154,6 +154,7 @@ export function BuyWidget() {
           quoteId: q.quoteId,
           expiresAt: q.expiresAt,
           exchangeRate: q.exchangeRate,
+          usdValue: q.usdValue,
           inputAmount: q.input.amount,
           inputCurrency: q.input.currency,
           outputAmount: q.output.amount,
@@ -474,7 +475,14 @@ export function BuyWidget() {
       {state.step === "review" && state.quote && (
         <ReviewStep
           quote={state.quote}
-          methodId={state.methodId}
+          methodLabel={
+            activeCountry?.methods.find((m) => m.id === state.methodId)?.label ??
+            state.methodId
+          }
+          isMobileMoney={
+            activeCountry?.methods.find((m) => m.id === state.methodId)?.kind ===
+            "mobile_money"
+          }
           phone={state.phone}
           wallet={state.wallet}
           payoutDestinationTag={state.payoutDestinationTag}

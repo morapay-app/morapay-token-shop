@@ -109,6 +109,14 @@ export function AmountStep(props: Props) {
               })}{" "}
               ${props.ticker}
             </p>
+            {Number(props.quote.usdValue) > 0 && (
+              <p className="text-sm text-[var(--mp-text-muted)] mt-1">
+                {Number(props.quote.usdValue).toLocaleString("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                })}
+              </p>
+            )}
             {props.showFee && props.quote.totalFee != null && (
               <p className="text-sm text-[var(--mp-text-muted)] mt-1">
                 Fee {String(props.quote.totalFee)}

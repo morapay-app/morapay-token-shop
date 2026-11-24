@@ -17,6 +17,7 @@ export type QuoteView = {
   quoteId: string;
   expiresAt: string;
   exchangeRate?: string;
+  usdValue?: string;
   inputAmount: string;
   inputCurrency: string;
   outputAmount: string;
