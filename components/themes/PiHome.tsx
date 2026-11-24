@@ -2,8 +2,6 @@ import { Header } from "@/components/Header";
 import { BuyWidget } from "@/components/BuyWidget/BuyWidget";
 import { shopConfig } from "@/shop.config";
 
-const FLOW = ["Cedis or naira", "Morapay", "Your Pi wallet"];
-
 /** Pi: violet stage with a gold coin; copy beside the buy card on wide screens. */
 export function PiHome({
   headline,
@@ -27,11 +25,6 @@ export function PiHome({
           />
           <h1 className="pi-stage-title font-heading">{headline}</h1>
           {subline ? <p className="pi-stage-sub">{subline}</p> : null}
-          <ol className="pi-stage-flow" aria-label="How your order moves">
-            {FLOW.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
         </div>
         <div className="pi-stage-buy">
           <BuyWidget />

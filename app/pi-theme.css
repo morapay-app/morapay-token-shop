@@ -2,14 +2,14 @@
 .shop-pi {
   --mp-canvas: #d9dfe2;
   --mp-hero: #ffffff;
-  --mp-card: #ffffff;
-  --mp-subcard: #f3edfb;
-  --mp-divider: #d8c9ee;
+  --mp-card: #f8f6ec;
+  --mp-subcard: #edebdf;
+  --mp-divider: #dad6c6;
   --mp-text: #24113f;
   --mp-text-muted: #574a6b;
-  --mp-pill-active: #f5b942;
-  --mp-pill-inactive: #ebe1f8;
-  --mp-pill-inactive-text: #4b2386;
+  --mp-pill-active: #38d690;
+  --mp-pill-inactive: #dff6ea;
+  --mp-pill-inactive-text: #0f5c3e;
   --mp-button-bg: #6b3fa0;
   --mp-button-text: #ffffff;
   --mp-warning-bg: #fdeccb;
@@ -26,18 +26,11 @@
 }
 
 .shop-pi .card {
-  border-radius: 20px;
   color: var(--mp-text);
 }
 
 .shop-pi .receipt-card {
   color: var(--receipt-text);
-}
-
-.shop-pi .subcard,
-.shop-pi .field,
-.shop-pi .btn-primary {
-  border-radius: 12px;
 }
 
 .shop-pi .btn-primary:disabled {
@@ -47,6 +40,8 @@
 }
 
 .shop-pi .pi-header {
+  --mp-pill-active: #f5b942;
+  --mp-pill-inactive: #ebe1f8;
   background: var(--pi-stage);
   color: var(--pi-stage-text);
   display: flex;
@@ -103,25 +98,6 @@
   grid-column: 1 / -1;
   margin: 0;
   color: var(--pi-stage-muted);
-}
-
-.shop-pi .pi-stage-flow {
-  grid-column: 1 / -1;
-  list-style: none;
-  margin: 0;
-  padding: 0.75rem 0 0;
-  border-top: 1px solid color-mix(in srgb, var(--pi-gold) 45%, transparent);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
-}
-
-.shop-pi .pi-stage-flow li + li::before {
-  content: "→";
-  color: var(--pi-gold);
-  margin-right: 0.5rem;
 }
 
 .shop-pi .pi-stage-buy {
