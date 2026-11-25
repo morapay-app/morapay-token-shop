@@ -47,10 +47,25 @@ function nameLabel(raw: string): string {
     .join(" ");
 }
 
+function findAccount(o: Raw, depth = 0): Raw | null {
+  if (str(o.accountNumber ?? o.account_number)) return o;
+  if (depth > 3) return null;
+  for (const key of ["bankDeposit", "bank_deposit", "payment", "paymentInstructions"]) {
+    const next = obj(o[key]);
+    if (Object.keys(next).length > 0) {
+      const found = findAccount(next, depth + 1);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 /** Accepts the confirm response, its `bankDeposit`, or `paymentInstructions`; null when incomplete. */
 export function parseBankDeposit(raw: unknown, currency: string): BankDeposit | null {
-  const top = obj(raw);
-  const d = obj(top.bankDeposit ?? top.bank_deposit ?? obj(top.payment).bankDeposit ?? top);
+  // Shapes seen: the merchant view's `payment.bankDeposit`, confirmOnramp's `bankDeposit` (which is the
+  // whole payment object, so the details sit one level deeper), or the details themselves.
+  const d = findAccount(obj(raw));
+  if (!d) return null;
   const bankName = str(d.bankName ?? d.bank_name);
   const accountNumber = str(d.accountNumber ?? d.account_number);
   const amount = str(d.amount);

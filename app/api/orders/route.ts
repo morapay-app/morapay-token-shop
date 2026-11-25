@@ -275,13 +275,14 @@ export async function POST(req: Request) {
     }
 
     // Bank transfer
-    const confirmed = await confirmOnramp(
-      ref,
-      { wallet_address: addr.normalized },
-      morapayCtx,
-    );
-    // Only the transfer details the payer needs; never the raw confirm response.
-    const bankDeposit = parseBankDeposit(confirmed, body.currency);
+    // Only the transfer details the payer needs; never the raw confirm response. The virtual account
+    // can take a moment to appear after the order opens, so read it a few times before giving up.
+    let bankDeposit = null;
+    for (let attempt = 0; attempt < 4 && !bankDeposit; attempt += 1) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+      const confirmed = await confirmOnramp(ref, { wallet_address: addr.normalized }, morapayCtx);
+      bankDeposit = parseBankDeposit(confirmed, body.currency);
+    }
     if (!bankDeposit) {
       return jsonErr({ message: "Bank details are unavailable. Don't send money.", status: 502 }, 502);
     }

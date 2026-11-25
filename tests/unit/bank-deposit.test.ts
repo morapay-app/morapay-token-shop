@@ -17,6 +17,11 @@ const confirm = {
 };
 
 describe("bank deposit", () => {
+  it("reads the real confirmOnramp shape: bankDeposit is the payment object, details one level deeper", () => {
+    const confirmed = { reference: "r", status: "PENDING", bankDeposit: confirm, payment: confirm };
+    expect(parseBankDeposit(confirmed, "ngn")?.accountNumber).toBe("4574745751");
+  });
+
   it("keeps only what the payer needs, in plain words", () => {
     expect(parseBankDeposit(confirm, "ngn")).toEqual({
       bankName: "Fidelity Bank",
