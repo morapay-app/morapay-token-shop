@@ -10,6 +10,7 @@ import {
 import { MorapayApiError } from "@/lib/morapay/client";
 import { getShopConfig, getHealth } from "@/lib/shop-runtime";
 import { jsonOk, jsonErr } from "@/lib/api-response";
+import { bodyIssue, zPositiveAmount } from "@/lib/validate/amount";
 import { clientIp, rateLimit, RL } from "@/lib/ratelimit";
 import {
   validateWalletAddress,
@@ -24,7 +25,7 @@ import { REFERRAL_COOKIE, resolveReferral } from "@/lib/referral";
 export const dynamic = "force-dynamic";
 
 const BodySchema = z.object({
-  fiatAmount: z.string().regex(/^\d+(\.\d+)?$/),
+  fiatAmount: zPositiveAmount,
   currency: z.string().min(3).max(4),
   country: z.string().length(2),
   methodId: z.string(),
@@ -62,7 +63,11 @@ export async function POST(req: Request) {
     }
 
     const raw = await req.json();
-    const body = BodySchema.parse(raw);
+    const parsedBody = BodySchema.safeParse(raw);
+    if (!parsedBody.success) {
+      return jsonErr({ ...bodyIssue(parsedBody.error), status: 400 }, 400);
+    }
+    const body = parsedBody.data;
 
     const addr = validateWalletAddress(
       body.walletAddress,
