@@ -332,7 +332,7 @@ export function SellWidget() {
       </div>
       <div>
         <label htmlFor="sell-bank" className="label">
-          Network or bank
+          {currency.toUpperCase() === "NGN" ? "Bank" : "Network or bank"}
         </label>
         <select
           id="sell-bank"

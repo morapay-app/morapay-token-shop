@@ -1,3 +1,4 @@
+import type { BankDeposit } from "@/lib/morapay/bank-deposit";
 import type { OrderReceipt } from "@/lib/morapay/receipt";
 
 export type BuyStep =
@@ -42,7 +43,7 @@ export type BuyState = {
   quote: QuoteView | null;
   acceptedRisk: boolean;
   ref: string | null;
-  bankDeposit: Record<string, unknown> | null;
+  bankDeposit: BankDeposit | null;
   otp: string;
   error: string | null;
   errorCode: string | null;
@@ -71,7 +72,7 @@ export type BuyAction =
       type: "SUBMIT_OK";
       ref: string;
       nextStep: BuyStep;
-      bankDeposit?: Record<string, unknown> | null;
+      bankDeposit?: BankDeposit | null;
     }
   | {
       type: "SUBMIT_ERR";

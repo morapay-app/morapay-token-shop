@@ -17,6 +17,7 @@ import {
 } from "@/lib/validate/address";
 import { resolvePayoutDestinationTag } from "@/lib/validate/destination-tag";
 import { merchantCoreTokenAddress } from "@/lib/morapay/core-token";
+import { parseBankDeposit } from "@/lib/morapay/bank-deposit";
 import { parsePhoneForCountry, maskPhone } from "@/lib/validate/phone";
 import { REFERRAL_COOKIE, resolveReferral } from "@/lib/referral";
 
@@ -279,11 +280,11 @@ export async function POST(req: Request) {
       { wallet_address: addr.normalized },
       morapayCtx,
     );
-    const bankDeposit =
-      confirmed.bankDeposit ??
-      confirmed.bank_deposit ??
-      confirmed.paymentInstructions ??
-      confirmed;
+    // Only the transfer details the payer needs; never the raw confirm response.
+    const bankDeposit = parseBankDeposit(confirmed, body.currency);
+    if (!bankDeposit) {
+      return jsonErr({ message: "Bank details are unavailable. Don't send money.", status: 502 }, 502);
+    }
 
     return jsonOk({
       ref,
