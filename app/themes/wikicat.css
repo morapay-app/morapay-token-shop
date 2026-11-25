@@ -1,0 +1,103 @@
+/* ---- Wiki Cat property theme (wikicatcoin.com palette) ---- */
+.shop-wikicat {
+  --wikicat-violet: #6159b5;
+  --wikicat-violet-soft: #a89fff;
+  --wikicat-yellow: #fde047;
+  --wikicat-mint: #bcf698;
+  --wikicat-sky: #9de7f1;
+  --wikicat-pink: #feb6f5;
+  --wikicat-ink: #0a0a0a;
+  --mp-canvas: #d9dfe2;
+  --brand-accent: var(--wikicat-violet);
+  --brand-accent-on-light: var(--wikicat-violet);
+  --brand-hero-bg: var(--wikicat-violet-soft);
+}
+
+.shop-wikicat .wikicat-hero {
+  background-color: var(--wikicat-sky);
+  background-image: url("/brand/wikicat/clouds.png");
+  background-size: cover;
+  background-position: center top;
+  color: var(--wikicat-ink);
+  padding-bottom: 2.5rem;
+}
+
+.shop-wikicat .wikicat-hero-inner {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 0 1rem 1.5rem;
+  text-align: center;
+}
+
+.shop-wikicat .wikicat-header {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1.25rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.shop-wikicat .wikicat-header .font-heading {
+  font-family: var(--font-wikicat-display), var(--font-manrope), system-ui,
+    sans-serif;
+  font-weight: 800;
+  color: var(--wikicat-violet);
+}
+
+.shop-wikicat .wikicat-header-ticker {
+  color: color-mix(in srgb, var(--wikicat-violet) 75%, var(--wikicat-ink));
+  font-weight: 700;
+}
+
+.shop-wikicat .wikicat-mascot {
+  width: min(200px, 45vw);
+  height: auto;
+  margin: 0.5rem auto 0.25rem;
+  display: block;
+  filter: drop-shadow(0 10px 18px rgb(0 0 0 / 15%));
+}
+
+.shop-wikicat .wikicat-headline {
+  margin: 0.25rem 0 0.5rem;
+  font-family: var(--font-wikicat-display), var(--font-manrope), system-ui,
+    sans-serif;
+  font-size: clamp(2.75rem, 11vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.shop-wikicat .wikicat-headline-wiki {
+  color: var(--wikicat-yellow);
+  -webkit-text-stroke: 1.25px var(--wikicat-ink);
+}
+
+.shop-wikicat .wikicat-headline-cat {
+  color: var(--wikicat-violet-soft);
+  -webkit-text-stroke: 1.25px var(--wikicat-ink);
+}
+
+.shop-wikicat .wikicat-tagline {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin: 0 0 0.35rem;
+}
+
+.shop-wikicat .wikicat-subline {
+  margin: 0 auto 1rem;
+  max-width: 28rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--wikicat-ink) 78%, white);
+}
+
+.shop-wikicat .wikicat-buy-shell {
+  margin-top: 0.75rem;
+}
+
+.shop-wikicat .wikicat-hero ~ section h2 {
+  color: var(--wikicat-violet);
+}

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getBanks } from "@/lib/morapay/ramp";
 import { jsonOk, jsonErr } from "@/lib/api-response";
+import { listedInstitutions } from "@/lib/sell";
 import { clientIp, rateLimit, RL } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function GET(req: Request) {
       .parse(url.searchParams.get("currency")?.toLowerCase());
 
     const data = await getBanks(currency, { buyerIp: ip });
-    return jsonOk(data);
+    return jsonOk({ ...data, institutions: listedInstitutions(data.institutions) });
   } catch (err) {
     return jsonErr(err, 502);
   }

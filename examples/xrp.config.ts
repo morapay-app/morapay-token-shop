@@ -1,14 +1,11 @@
+import { ghana, nigeria } from "@/config/markets";
 import type { ShopConfigInput } from "@/config/schema";
-
-const resolvedSiteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-  "https://xrp.morapay.shop";
+import { envSiteUrl } from "@/lib/site-url";
 
 /** Native XRP on the XRP Ledger — chainId 144, Morapay contract id `xrp`. */
 const xrpConfig = {
   shopId: "xrp",
-  /** Runtime canonical URL also comes from `NEXT_PUBLIC_SITE_URL` in layout/sitemap. */
-  siteUrl: resolvedSiteUrl,
+  siteUrl: envSiteUrl("https://xrp.morapay.shop"),
   token: {
     name: "XRP",
     ticker: "XRP",
@@ -26,6 +23,7 @@ const xrpConfig = {
     accentText: "#0F172A",
     favicon: "/brand/xrp/favicon.ico",
     layoutVariant: "default",
+    ogImage: "xrp",
     overridePrimary: true,
     heroImage: "/brand/xrp/hero.svg",
     headline: "Buy XRP with mobile money or bank",
@@ -34,65 +32,7 @@ const xrpConfig = {
   },
   countries: {
     default: "GH",
-    list: [
-      {
-        code: "GH",
-        currency: "GHS",
-        enabled: true,
-        quickAmounts: [50, 100, 200, 500],
-        caps: { minFiat: 50, maxFiat: 2900 },
-        methods: [
-          {
-            id: "momo_mtn",
-            kind: "mobile_money",
-            label: "MTN MoMo",
-            enabled: true,
-            networkProvider: "MTN",
-            institutionCode: "0004",
-            phonePrefixes: ["024", "025", "053", "054", "055", "059"],
-          },
-          {
-            id: "momo_telecel",
-            kind: "mobile_money",
-            label: "Telecel Cash",
-            enabled: true,
-            networkProvider: "Vodafone",
-            institutionCode: "0006",
-            phonePrefixes: ["020", "050"],
-          },
-          {
-            id: "momo_airteltigo",
-            kind: "mobile_money",
-            label: "AirtelTigo Money",
-            enabled: true,
-            networkProvider: "AirtelTigo",
-            institutionCode: "0005",
-            phonePrefixes: ["026", "027", "056", "057"],
-          },
-          {
-            id: "bank_transfer",
-            kind: "bank_transfer",
-            label: "Bank transfer",
-            enabled: true,
-          },
-        ],
-      },
-      {
-        code: "NG",
-        currency: "NGN",
-        enabled: true,
-        quickAmounts: [5000, 10000, 25000, 50000],
-        caps: { minFiat: 3000, maxFiat: 5000000 },
-        methods: [
-          {
-            id: "bank_transfer",
-            kind: "bank_transfer",
-            label: "Bank transfer",
-            enabled: true,
-          },
-        ],
-      },
-    ],
+    list: [ghana(), nigeria()],
   },
   /** Core sells need at least 4 USDC of value; 5 XRP leaves room for price moves. */
   sell: { enabled: true, minToken: 5, maxToken: 7000 },

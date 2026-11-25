@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getChain } from "./chains";
+import { chainKindSpec } from "./chain-kinds";
 
 const hexColor = z.string().regex(/^#([0-9a-f]{6})$/i);
 
@@ -81,14 +82,27 @@ export const ShopConfigSchema = z
       heroImage: z.string().optional(),
       /** Public path to favicon (e.g. /brand/wikicat/favicon.ico). Omit to auto-detect public/brand/<shopId>/favicon.ico. */
       favicon: z.string().regex(/^\//).optional(),
-      /** Home shell: classic hero, AMEM-style culture stage, or WikiCat property theme. */
+      /** Theme: see config/themes.ts. Omit for the culture stage (when set) or the classic hero. */
       layoutVariant: z
         .enum(["default", "culture", "wikicat", "simple", "pi"])
         .optional(),
+      /** Share image design. Omit for the generic one. */
+      ogImage: z.enum(["xrp", "pi"]).optional(),
       overridePrimary: z.boolean().default(false),
       headline: z.string().default("Buy ${ticker} with mobile money or bank"),
       subline: z.string().optional(),
     }),
+    /** Replaces the community defaults in lib/shop-copy.ts. */
+    copy: z
+      .object({
+        /** FAQ: "What is this?" */
+        about: z.string().optional(),
+        /** FAQ: "Who runs this site?" */
+        operator: z.string().optional(),
+        /** Risk disclaimer. */
+        risk: z.string().optional(),
+      })
+      .default({}),
     countries: z.object({
       default: z.string().length(2),
       list: z.array(CountrySchema).min(1),
@@ -182,26 +196,20 @@ export const ShopConfigSchema = z
           path: ["token", "contract"],
         });
       }
-    } else if (chain?.kind === "xrpl") {
-      if (contract.toLowerCase() !== "xrp") {
+    }
+    const native = chainKindSpec(chain).native;
+    if (native) {
+      if (contract.toLowerCase() !== native.contract) {
         ctx.addIssue({
           code: "custom",
-          message: "XRPL native asset token.contract must be \"xrp\"",
+          message: `${native.label} native asset token.contract must be "${native.contract}"`,
           path: ["token", "contract"],
         });
       }
-    } else if (chain?.kind === "pi") {
-      if (contract.toLowerCase() !== "pi") {
+      if (native.decimals != null && cfg.token.decimals !== native.decimals) {
         ctx.addIssue({
           code: "custom",
-          message: "Pi native asset token.contract must be \"pi\"",
-          path: ["token", "contract"],
-        });
-      }
-      if (cfg.token.decimals !== 7) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Pi uses 7 decimals",
+          message: `${native.label} uses ${native.decimals} decimals`,
           path: ["token", "decimals"],
         });
       }
@@ -248,6 +256,9 @@ export function lintShopConfig(cfg: ShopConfigInput): string[] {
     cfg.token.description,
     cfg.brand.headline ?? "",
     cfg.brand.subline ?? "",
+    cfg.copy?.about ?? "",
+    cfg.copy?.operator ?? "",
+    cfg.copy?.risk ?? "",
     ...(cfg.faqExtra ?? []).flatMap((f) => [f.q, f.a]),
     ...cultureBlobs,
   ];

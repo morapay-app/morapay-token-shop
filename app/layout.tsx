@@ -3,10 +3,15 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { shopConfig } from "@/shop.config";
 import { resolveBrandMetadataIcons } from "@/lib/brand-icon";
-import { resolveHomeLayoutVariant } from "@/lib/home-layout";
+import { themeColor } from "@/config/themes";
+import { envSiteUrl } from "@/lib/site-url";
 import { accentForLightText } from "@/lib/contrast";
 import "./globals.css";
-import "./pi-theme.css";
+import "./themes/culture.css";
+import "./themes/wikicat.css";
+import "./themes/widget-surface.css";
+import "./themes/simple.css";
+import "./themes/pi.css";
 
 // Self-hosted: next/font/google intermittently crashes CI when Google
 // returns extensionless /l/font?kit= URLs (vercel/next.js#99114).
@@ -70,8 +75,7 @@ const wikicatDisplay = localFont({
   display: "swap",
 });
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || shopConfig.siteUrl;
+const siteUrl = envSiteUrl(shopConfig.siteUrl);
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -93,14 +97,8 @@ export const metadata: Metadata = {
   icons: resolveBrandMetadataIcons(shopConfig.shopId, shopConfig.brand),
 };
 
-const homeLayout = resolveHomeLayoutVariant(shopConfig);
-
 export const viewport: Viewport = {
-  themeColor:
-    homeLayout === "wikicat" || homeLayout === "simple"
-      ? (shopConfig.brand.heroBg ??
-          (homeLayout === "wikicat" ? "#9DE7F1" : "#ffffff"))
-      : (shopConfig.culture?.stageBg ?? shopConfig.brand.heroBg ?? "#ffffff"),
+  themeColor: themeColor(shopConfig),
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

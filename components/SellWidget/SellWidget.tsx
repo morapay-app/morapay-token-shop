@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { shopConfig } from "@/shop.config";
 import { validateWalletAddress } from "@/lib/validate/address";
 import { getChain } from "@/config/chains";
+import { chainKindSpec } from "@/config/chain-kinds";
+import { AccountName } from "./AccountName";
+import { AddressDepositInstructions } from "./AddressDepositInstructions";
+import { InstitutionPicker } from "./InstitutionPicker";
 import { SellTracker } from "./SellTracker";
 import { MemoDepositInstructions } from "./MemoDepositInstructions";
+import { useAccountName } from "./useAccountName";
 import {
-  institutionLabel,
   keepInstitution,
+  needsAccountName,
+  NUBAN_LENGTH,
   sellAmountError,
   shopCurrencies,
   sortInstitutions,
@@ -47,8 +52,12 @@ export function SellWidget() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const chain = getChain(shopConfig.token.chainId);
-  const isXrpl = chain?.kind === "xrpl";
-  const isPi = chain?.kind === "pi";
+  const spec = chainKindSpec(chain);
+  const tagRequired = spec.depositReference === "destination_tag";
+  const memoRequired = spec.depositReference === "memo";
+  const nameRequired = needsAccountName(currency);
+  const { check, retry } = useAccountName(currency, bankCode, account);
+  const accountVerified = check.state === "off" || check.state === "ok";
 
   const amountError = amount ? sellAmountError(amount, shopConfig) : null;
   const institution = institutions.find((i) => i.code === bankCode);
@@ -114,8 +123,18 @@ export function SellWidget() {
     return () => clearTimeout(timer);
   }, [amount, currency, available]);
 
+  /** A bank or number from one currency must never carry over to another. */
+  function changeCurrency(next: string) {
+    if (next === currency) return;
+    setCurrency(next);
+    setInstitutions([]);
+    setBankCode("");
+    setAccount("");
+  }
+
   async function submit() {
     setError(null);
+    if (!accountVerified) return;
     const v = validateWalletAddress(
       wallet,
       shopConfig.token.chainId,
@@ -151,17 +170,19 @@ export function SellWidget() {
         return;
       }
       if (
-        isXrpl &&
+        tagRequired &&
         (j.data.depositDestinationTag == null ||
           String(j.data.depositDestinationTag).trim() === "")
       ) {
         setError(
-          "Missing deposit destination tag. Do not send XRP — contact support with your order reference.",
+          `Missing deposit destination tag. Do not send ${shopConfig.token.ticker} — contact support with your order reference.`,
         );
         return;
       }
-      if (isPi && !j.data.depositMemo) {
-        setError("Missing deposit memo. Do not send PI. Contact support.");
+      if (memoRequired && !j.data.depositMemo) {
+        setError(
+          `Missing deposit memo. Do not send ${shopConfig.token.ticker}. Contact support.`,
+        );
         return;
       }
       setDeposit({
@@ -178,14 +199,12 @@ export function SellWidget() {
     }
   }
 
-  const tagRequired = isXrpl;
-
-  if (deposit && isPi && deposit.depositMemo) {
+  if (deposit && memoRequired && deposit.depositMemo) {
     return (
       <SellTracker orderRef={deposit.ref} ticker={shopConfig.token.ticker}>
         <MemoDepositInstructions
           ticker={shopConfig.token.ticker}
-          networkName={chain?.name ?? "Pi Network"}
+          networkName={chain?.name ?? shopConfig.token.name}
           depositAddress={deposit.depositAddress}
           depositMemo={deposit.depositMemo}
           depositAmount={deposit.depositAmount ?? amount}
@@ -200,81 +219,21 @@ export function SellWidget() {
       return (
         <div className="card p-5 space-y-4" role="alert">
           <p className="text-sm text-[var(--mp-warning-text)]">
-            Missing deposit destination tag. Do not send XRP — contact support
-            with ref {deposit.ref}.
+            Missing deposit destination tag. Do not send {shopConfig.token.ticker} —
+            contact support with ref {deposit.ref}.
           </p>
         </div>
       );
     }
-    const qrValue =
-      tagRequired && deposit.depositDestinationTag != null
-        ? `${deposit.depositAddress}?dt=${deposit.depositDestinationTag}`
-        : deposit.depositAddress;
-
     return (
       <SellTracker orderRef={deposit.ref} ticker={shopConfig.token.ticker}>
-      <div className="card p-5 space-y-4">
-        <h2 className="font-heading text-xl font-bold">Send {shopConfig.token.ticker}</h2>
-        <p className="text-sm text-[var(--mp-text-muted)]">
-          Send exactly {amount} {shopConfig.token.ticker} to the address below
-          now. Orders with no deposit are cancelled.
-        </p>
-        {tagRequired && (
-          <div
-            className="rounded-2xl border-2 border-[var(--mp-warning-text)] bg-[var(--mp-warning-bg)] p-4 text-sm"
-            role="alert"
-          >
-            <p className="font-semibold text-[var(--mp-warning-text)]">
-              Include the destination tag
-            </p>
-            <p className="mt-1">
-              You must send with destination tag{" "}
-              <span className="font-mono font-bold">
-                {String(deposit.depositDestinationTag)}
-              </span>
-              . Sending without this tag can mean lost funds.
-            </p>
-          </div>
-        )}
-        <div className="flex justify-center">
-          <QRCodeSVG value={qrValue} size={160} />
-        </div>
-        <div className="space-y-2">
-          <p className="label mb-0">Deposit address</p>
-          <p className="font-mono text-xs break-all subcard p-3">
-            {deposit.depositAddress}
-          </p>
-          <button
-            type="button"
-            className="btn-ghost w-full"
-            onClick={() =>
-              void navigator.clipboard.writeText(deposit.depositAddress)
-            }
-          >
-            Copy address
-          </button>
-        </div>
-        {deposit.depositDestinationTag != null &&
-        deposit.depositDestinationTag !== "" ? (
-          <div className="space-y-2">
-            <p className="label mb-0">Destination tag</p>
-            <p className="font-mono text-lg font-bold subcard p-3 text-center">
-              {String(deposit.depositDestinationTag)}
-            </p>
-            <button
-              type="button"
-              className="btn-primary w-full"
-              onClick={() =>
-                void navigator.clipboard.writeText(
-                  String(deposit.depositDestinationTag),
-                )
-              }
-            >
-              Copy destination tag
-            </button>
-          </div>
-        ) : null}
-      </div>
+        <AddressDepositInstructions
+          ticker={shopConfig.token.ticker}
+          amount={amount}
+          depositAddress={deposit.depositAddress}
+          destinationTag={deposit.depositDestinationTag}
+          tagRequired={tagRequired}
+        />
       </SellTracker>
     );
   }
@@ -321,7 +280,7 @@ export function SellWidget() {
           id="sell-currency"
           className="field"
           value={currency}
-          onChange={(e) => setCurrency(e.target.value)}
+          onChange={(e) => changeCurrency(e.target.value)}
         >
           {CURRENCIES.map((code) => (
             <option key={code} value={code}>
@@ -331,22 +290,13 @@ export function SellWidget() {
         </select>
       </div>
       <div>
-        <label htmlFor="sell-bank" className="label">
-          {currency.toUpperCase() === "NGN" ? "Bank" : "Network or bank"}
-        </label>
-        <select
+        <InstitutionPicker
           id="sell-bank"
-          className="field"
+          label={nameRequired ? "Bank" : "Network or bank"}
+          institutions={institutions}
           value={bankCode}
-          onChange={(e) => setBankCode(e.target.value)}
-        >
-          <option value="">Choose one</option>
-          {institutions.map((i) => (
-            <option key={i.code} value={i.code}>
-              {institutionLabel(i)}
-            </option>
-          ))}
-        </select>
+          onChange={setBankCode}
+        />
         {institutionsError && (
           <p className="mt-2 text-sm text-[var(--mp-warning-text)]" role="alert">
             {institutionsError}
@@ -361,19 +311,28 @@ export function SellWidget() {
           id="sell-account"
           className="field"
           value={account}
-          onChange={(e) => setAccount(e.target.value)}
+          inputMode={nameRequired ? "numeric" : undefined}
+          aria-describedby={nameRequired ? "sell-account-name" : undefined}
+          onChange={(e) =>
+            setAccount(
+              nameRequired
+                ? e.target.value.replace(/\D/g, "").slice(0, NUBAN_LENGTH)
+                : e.target.value,
+            )
+          }
         />
+        {nameRequired && <AccountName check={check} onRetry={retry} />}
       </div>
       <div>
         <label htmlFor="sell-wallet" className="label">
-          {isPi ? "Your sending Pi wallet" : "Your sending wallet"}
+          {spec.wallet.sellLabel}
         </label>
         <input
           id="sell-wallet"
           className="field font-mono text-sm"
           value={wallet}
           onChange={(e) => setWallet(e.target.value)}
-          placeholder={isXrpl ? "r… or X-address" : isPi ? "G…" : undefined}
+          placeholder={spec.wallet.sellPlaceholder}
         />
       </div>
       {error && (
@@ -384,7 +343,9 @@ export function SellWidget() {
       <button
         type="button"
         className="btn-primary w-full"
-        disabled={loading || !payout || !bankCode || !account || !wallet}
+        disabled={
+          loading || !payout || !bankCode || !account || !accountVerified || !wallet
+        }
         onClick={() => void submit()}
       >
         {loading ? "Starting…" : "Continue"}

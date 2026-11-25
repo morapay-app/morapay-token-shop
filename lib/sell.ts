@@ -39,10 +39,67 @@ export function keepInstitution(current: string, list: SellInstitution[]): strin
 const MOMO_LABELS: Record<string, string> = {
   MTN: "MTN MoMo",
   VODAFONE: "Telecel Cash (Vodafone)",
+  TELECEL: "Telecel Cash (Vodafone)",
   AIRTEL: "AirtelTigo (Airtel)",
   TIGO: "AirtelTigo (Tigo)",
+  AIRTELTIGO: "AirtelTigo Money",
 };
 
+const MOMO_SUFFIX = /\s+(mobile money|momo|money|cash)$/i;
+
+/** Drops a routing code the rail put in a name: "MTN (0004)", "GTBank - 058", "058 GTBank". */
+function stripCode(name: string, code: string): string {
+  const escaped = code.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!escaped) return name.trim();
+  return name
+    .replace(new RegExp(`\\s*[([]\\s*(?:code\\s*)?${escaped}\\s*[)\\]]`, "gi"), "")
+    .replace(new RegExp(`\\s*[-–—:|/]\\s*${escaped}\\s*$`, "i"), "")
+    .replace(new RegExp(`^${escaped}\\s*[-–—:|/]?\\s+`, "i"), "")
+    .trim();
+}
+
+/** What the customer sees: the name only, never the code. */
 export function institutionLabel(i: SellInstitution): string {
-  return (i.kind === "mobile_money" && MOMO_LABELS[i.name.trim().toUpperCase()]) || i.name;
+  const name = stripCode(i.name, i.code);
+  if (i.kind !== "mobile_money") return name;
+  return MOMO_LABELS[name.replace(MOMO_SUFFIX, "").replace(/\s+/g, "").toUpperCase()] ?? name;
+}
+
+/** Payment providers are never named to customers, even where one runs a bank of its own. */
+const PROVIDER_NAME = /paystack|quidax|pollar/i;
+
+/** Entries we can show: named (not just a code) and not a payment provider. */
+export function listedInstitutions(list: SellInstitution[]): SellInstitution[] {
+  return list.filter((i) => {
+    const label = institutionLabel(i);
+    return /\p{L}/u.test(label) && label !== i.code && !PROVIDER_NAME.test(label);
+  });
+}
+
+function fold(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase();
+}
+
+/** Every typed word must appear in the shown name or the issued name; codes never match. */
+export function searchInstitutions(list: SellInstitution[], query: string): SellInstitution[] {
+  const words = fold(query).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return list;
+  return list.filter((i) => {
+    const haystack = fold(`${institutionLabel(i)} ${stripCode(i.name, i.code)}`);
+    return words.every((w) => haystack.includes(w));
+  });
+}
+
+/** Name enquiry is Nigeria-only (NUBAN); cedi payouts are verified by core during the order. */
+export function needsAccountName(currency: string): boolean {
+  return currency.toUpperCase() === "NGN";
+}
+
+export const NUBAN_LENGTH = 10;
+
+export function isNuban(account: string): boolean {
+  return account.length === NUBAN_LENGTH && /^\d+$/.test(account);
 }

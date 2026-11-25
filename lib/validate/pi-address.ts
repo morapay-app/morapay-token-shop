@@ -129,7 +129,3 @@ export function validatePiAddress(input: string): PiAddressValidation {
   }
   return { ok: true, normalized: trimmed };
 }
-
-export function isValidPiAddress(input: string): boolean {
-  return validatePiAddress(input).ok;
-}

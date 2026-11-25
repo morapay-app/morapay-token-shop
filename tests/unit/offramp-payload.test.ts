@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildInitiateOfframpPayload,
-  xrplOfframpDepositError,
+  offrampDepositError,
 } from "@/lib/morapay/ramp";
 
 describe("offramp payloads", () => {
@@ -36,20 +36,20 @@ describe("offramp payloads", () => {
     expect(payload.sourceTokenAddress).toBe(contract);
   });
 
-  it("xrplOfframpDepositError requires deposit tag", () => {
+  it("offrampDepositError requires deposit tag", () => {
     expect(
-      xrplOfframpDepositError(144, {
+      offrampDepositError(144, {
         depositAddress: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
       }),
     ).toMatch(/tag/i);
     expect(
-      xrplOfframpDepositError(144, {
+      offrampDepositError(144, {
         depositAddress: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH",
         depositDestinationTag: 99,
       }),
     ).toBeNull();
     expect(
-      xrplOfframpDepositError(56, {
+      offrampDepositError(56, {
         depositAddress: "0xabc",
       }),
     ).toBeNull();

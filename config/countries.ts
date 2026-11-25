@@ -115,7 +115,3 @@ export const COUNTRY_CATALOGUE: CatalogueCountry[] = [
 export function flagFor(code: string): string {
   return COUNTRY_CATALOGUE.find((c) => c.code === code)?.flag ?? "🌍";
 }
-
-export function nameFor(code: string): string {
-  return COUNTRY_CATALOGUE.find((c) => c.code === code)?.name ?? code;
-}

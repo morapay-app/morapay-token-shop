@@ -31,10 +31,6 @@ export async function getCachedRampConfig(): Promise<RampConfig | null> {
   }
 }
 
-export function __clearRampCache() {
-  cache = null;
-}
-
 export async function getHealth(): Promise<HealthSnapshot> {
   const signing = merchantSigningEnabled();
 

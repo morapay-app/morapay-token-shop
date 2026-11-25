@@ -27,15 +27,6 @@ export function amountBucket(amount: number): string {
   return "2000+";
 }
 
-export async function hashWallet(wallet: string): Promise<string> {
-  const data = new TextEncoder().encode(wallet.toLowerCase());
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-    .slice(0, 16);
-}
-
 /** Fire-and-forget client helper. */
 export function track(event: ShopEvent, meta?: EventPayload["meta"]) {
   if (typeof window === "undefined") return;

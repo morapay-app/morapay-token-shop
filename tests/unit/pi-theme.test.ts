@@ -4,7 +4,7 @@ import pi from "@/examples/pi.config";
 import xrp from "@/examples/xrp.config";
 import { ShopConfigSchema } from "@/config/schema";
 import { contrastRatio } from "@/lib/contrast";
-import { resolveHomeLayoutVariant } from "@/lib/home-layout";
+import { resolveHomeLayoutVariant } from "@/config/themes";
 import { PI_THEME as T } from "@/lib/pi-theme";
 
 const PAIRS: Array<[string, string, string]> = [
@@ -36,7 +36,7 @@ describe("pi theme", () => {
   });
 
   it("stylesheet uses the tested colours", () => {
-    const css = readFileSync("app/pi-theme.css", "utf8");
+    const css = readFileSync("app/themes/pi.css", "utf8");
     for (const hex of Object.values(T)) expect(css).toContain(hex);
   });
 

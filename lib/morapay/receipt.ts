@@ -1,4 +1,5 @@
 import { getChain } from "@/config/chains";
+import { chainKindSpec, isEvmTxHash } from "@/config/chain-kinds";
 import type { RampPhase } from "./status";
 
 /**
@@ -44,20 +45,11 @@ function methodLabel(tx: Raw): string | null {
   return method === "mobile_money" ? "Mobile money" : null;
 }
 
-const EVM_HASH = /^0x[a-fA-F0-9]{64}$/;
-const BARE_HASH = /^[a-fA-F0-9]{64}$/;
-
 function splitHashes(hash: string | null, chainId: number) {
   const chain = getChain(chainId);
   if (!hash || !chain) return { deliveryTx: null, swapTx: null };
-  const ownChain =
-    chain.kind === "evm"
-      ? EVM_HASH.test(hash)
-      : chain.kind === "xrpl" || chain.kind === "pi"
-        ? BARE_HASH.test(hash)
-        : !EVM_HASH.test(hash);
-  if (ownChain) return { deliveryTx: { hash, url: chain.explorerTx(hash) }, swapTx: null };
-  if (EVM_HASH.test(hash)) {
+  if (chainKindSpec(chain).isTxHash(hash)) return { deliveryTx: { hash, url: chain.explorerTx(hash) }, swapTx: null };
+  if (isEvmTxHash(hash)) {
     return { deliveryTx: null, swapTx: { hash, url: `https://basescan.org/tx/${hash}` } };
   }
   return { deliveryTx: null, swapTx: null };

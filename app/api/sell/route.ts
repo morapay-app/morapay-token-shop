@@ -9,7 +9,7 @@ import {
   parseOfframpDepositInfo,
 } from "@/lib/morapay/ramp";
 import { getShopConfig, getHealth } from "@/lib/shop-runtime";
-import { sellAmountError, shopCurrencies } from "@/lib/sell";
+import { isNuban, needsAccountName, sellAmountError, shopCurrencies } from "@/lib/sell";
 import { jsonOk, jsonErr } from "@/lib/api-response";
 import { clientIp, rateLimit, RL } from "@/lib/ratelimit";
 import { validateWalletAddress } from "@/lib/validate/address";
@@ -77,6 +77,17 @@ export async function POST(req: Request) {
     const banks = await getBanks(body.currency, morapayCtx);
     if (!banks.institutions.some((i) => i.code === body.bankCode)) {
       return jsonErr({ message: "Choose a payout network or bank.", status: 400 }, 400);
+    }
+
+    if (needsAccountName(body.currency) && !isNuban(body.accountNumber)) {
+      return jsonErr(
+        {
+          code: "account.invalid",
+          message: "Account number must be 10 digits",
+          status: 400,
+        },
+        400,
+      );
     }
 
     const quote = await getQuote(

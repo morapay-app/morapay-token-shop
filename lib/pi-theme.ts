@@ -1,4 +1,4 @@
-/** Pi shop palette. Mirrored as tokens in app/pi-theme.css; tests keep both equal and WCAG AA. */
+/** Pi shop palette. Mirrored as tokens in app/themes/pi.css; tests keep both equal and WCAG AA. */
 export const PI_THEME = {
   canvas: "#d9dfe2",
   stage: "#2a1052",

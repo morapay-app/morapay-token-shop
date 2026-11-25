@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * pnpm new-shop — copy an example config and prompt for fields.
+ * pnpm new-shop — copy an example config, prompt for fields, register the shop.
  */
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -17,7 +17,7 @@ async function main() {
   const rl = createInterface({ input, output });
   console.log("Create a new Morapay token shop config\n");
 
-  const example = await ask(rl, "Base example (milan|griot)", "milan");
+  const example = await ask(rl, "Base example (milan|xrp|pi|wikicat|ipod|amem|griot)", "milan");
   const shopId = await ask(rl, "shopId (kebab-case)", "my-token");
   const ticker = await ask(rl, "Token ticker", "TOKEN");
   const name = await ask(rl, "Token name", ticker);
@@ -43,7 +43,7 @@ async function main() {
   let text = readFileSync(src, "utf8");
   text = text
     .replace(/shopId:\s*"[^"]+"/, `shopId: "${shopId}"`)
-    .replace(/siteUrl:\s*"[^"]+"/, `siteUrl: "${siteUrl}"`)
+    .replace(/(siteUrl:\s*(?:envSiteUrl\()?)"[^"]+"/, `$1"${siteUrl}"`)
     .replace(/name:\s*"[^"]+"/, `name: "${name}"`)
     .replace(/ticker:\s*"[^"]+"/, `ticker: "${ticker}"`)
     .replace(/chainId:\s*\d+/, `chainId: ${Number(chainId)}`)
@@ -65,18 +65,28 @@ async function main() {
     }
   }
 
-  writeFileSync("shop.config.ts", text);
-  mkdirSync("public/brand", { recursive: true });
-  console.log("\nWrote shop.config.ts");
-  console.log("Add logo.png and hero.jpg to public/brand/");
-  console.log("Set env vars from .env.example, then deploy.");
+  const constName = `${shopId.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())}Config`;
+  text = text.replaceAll(/\b[A-Za-z]+Config\b(?=\s*=\s*\{)|(?<=export default )\w+(?=;)/g, constName);
 
-  // Also write a tiny marker for CI/scripted runs
-  writeFileSync(
-    path.join("public/brand", ".shop-id"),
-    shopId,
-    "utf8",
-  );
+  const out = path.join("examples", `${shopId}.config.ts`);
+  if (existsSync(out)) {
+    console.error(`${out} already exists`);
+    process.exit(1);
+  }
+  writeFileSync(out, text);
+
+  const registry = readFileSync("shop.config.ts", "utf8")
+    .replace(
+      /(import \w+Config from ".\/examples\/[^\n]+\n)(?!import \w+Config)/,
+      `$1import ${constName} from "./examples/${shopId}.config";\n`,
+    )
+    .replace("const SHOPS = [\n", `const SHOPS = [\n  ${constName},\n`);
+  writeFileSync("shop.config.ts", registry);
+
+  mkdirSync(path.join("public/brand", shopId), { recursive: true });
+  console.log(`\nWrote ${out} and listed it in shop.config.ts`);
+  console.log(`Add brand files to public/brand/${shopId}/ and set SHOP_ID=${shopId}`);
+  console.log("Set env vars from .env.example, then deploy.");
 }
 
 main().catch((e) => {

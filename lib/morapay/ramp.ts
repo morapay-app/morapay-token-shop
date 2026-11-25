@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { walletAddressesEqual } from "@/lib/validate/address";
 import { getChain } from "@/config/chains";
+import { chainKindSpec } from "@/config/chain-kinds";
 import { merchantCoreTokenAddress } from "@/lib/morapay/core-token";
 import { morapayFetch } from "./client";
 import {
@@ -9,7 +10,6 @@ import {
   parseOfframpDeposit,
   type OfframpDeposit,
 } from "./offramp-deposit";
-import { merchantSigningEnabled } from "./merchant-config";
 
 export const OnrampTargetSchema = z.object({
   chainId: z.number(),
@@ -51,7 +51,6 @@ export const RampConfigSchema = z.object({
 });
 
 export type RampConfig = z.infer<typeof RampConfigSchema>;
-export type OnrampTarget = z.infer<typeof OnrampTargetSchema>;
 
 export const QuoteSchema = z.object({
   quoteId: z.string(),
@@ -91,23 +90,6 @@ export const BanksResponseSchema = z.object({
   currency: z.string().optional(),
   country: z.string().optional(),
   institutions: z.array(InstitutionSchema).default([]),
-});
-
-export const LimitsSchema = z.object({
-  currency: z.string().optional(),
-  buy: z
-    .object({
-      minFiat: z.number(),
-      maxFiat: z.number(),
-    })
-    .optional(),
-  sell: z
-    .object({
-      minToken: z.number(),
-      maxToken: z.number(),
-    })
-    .optional(),
-  corridor: z.unknown().optional(),
 });
 
 const MERCHANT_RAMP = "/api/v1/merchant/ramp";
@@ -185,27 +167,28 @@ export async function getRampConfig(ctx: MorapayCallContext = {}): Promise<RampC
   });
 }
 
-export async function getLimits(
-  currency: string,
-  clientChannel = "browser",
-  ctx: MorapayCallContext = {},
-): Promise<z.infer<typeof LimitsSchema>> {
-  const data = await morapayFetch<unknown>(`${MERCHANT_RAMP}/limits`, {
-    searchParams: {
-      currency: currency.toLowerCase(),
-      client_channel: clientChannel,
-    },
-    buyerIp: ctx.buyerIp,
-  });
-  return LimitsSchema.parse(data);
-}
-
 export async function getBanks(currency: string, ctx: MorapayCallContext = {}) {
   const data = await morapayFetch<unknown>(`${MERCHANT_RAMP}/banks`, {
     searchParams: { currency: currency.toLowerCase() },
     buyerIp: ctx.buyerIp,
   });
   return BanksResponseSchema.parse(data);
+}
+
+const AccountNameSchema = z.object({ account_name: z.string() });
+
+/** Name on a Nigerian bank account (NUBAN). Core's route is public and unsigned. */
+export async function resolveBankAccountName(
+  input: { accountNumber: string; bankCode: string },
+  ctx: MorapayCallContext = {},
+): Promise<string> {
+  const data = await morapayFetch<unknown>("/api/public/ramp/banks/resolve", {
+    searchParams: { account_number: input.accountNumber, bank_code: input.bankCode },
+    buyerIp: ctx.buyerIp,
+    requireSigning: false,
+    timeoutMs: 15_000,
+  });
+  return AccountNameSchema.parse(data).account_name.trim();
 }
 
 /**
@@ -598,16 +581,16 @@ export function isTokenSupported(
   tokenAddress: string,
 ): boolean {
   const needle = tokenAddress.toLowerCase();
-  const nativePi = getChain(chainId)?.kind === "pi";
-  return config.supportedOnrampTargets.some(
-    (t) =>
-      t.chainId === chainId &&
-      (t.tokenAddress.toLowerCase() === needle ||
-        // Native PI may be listed as "pi", "native" or by symbol only.
-        (nativePi &&
-          (["pi", "native", ""].includes(t.tokenAddress.toLowerCase()) ||
-            t.symbol.toUpperCase() === "PI"))),
-  );
+  const native = chainKindSpec(getChain(chainId)).native;
+  return config.supportedOnrampTargets.some((t) => {
+    if (t.chainId !== chainId) return false;
+    const listed = t.tokenAddress.toLowerCase();
+    return (
+      listed === needle ||
+      native?.listedAs?.includes(listed) === true ||
+      (native?.listedSymbol != null && t.symbol.toUpperCase() === native.listedSymbol)
+    );
+  });
 }
 
 /** Deposit instructions from a transaction read, gaps filled from the initiate response. */
@@ -617,18 +600,6 @@ export function parseOfframpDepositInfo(
 ): OfframpDeposit {
   const primary = parseOfframpDeposit(confirmed);
   return initiated ? mergeOfframpDeposit(primary, parseOfframpDeposit(initiated)) : primary;
-}
-
-/** Kept for callers/tests: XRPL check only (other chains return null). */
-export function xrplOfframpDepositError(
-  chainId: number,
-  info: {
-    depositAddress: string;
-    depositDestinationTag?: number | string;
-  },
-): string | null {
-  if (getChain(chainId)?.kind !== "xrpl") return null;
-  return offrampDepositError(chainId, info);
 }
 
 export { offrampDepositError };

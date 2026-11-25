@@ -1,3 +1,4 @@
+import { ghana, nigeria, plannedMarkets } from "@/config/markets";
 import type { ShopConfigInput } from "@/config/schema";
 
 /** AMEM example — The African Meme on BNB Chain. */
@@ -91,127 +92,9 @@ const amemConfig = {
   countries: {
     default: "GH",
     list: [
-      {
-        code: "GH",
-        currency: "GHS",
-        enabled: true,
-        quickAmounts: [50, 100, 200, 500],
-        caps: { minFiat: 50, maxFiat: 1000 },
-        methods: [
-          {
-            id: "momo_mtn",
-            kind: "mobile_money",
-            label: "MTN MoMo",
-            enabled: true,
-            networkProvider: "MTN",
-            institutionCode: "0004",
-            phonePrefixes: ["024", "025", "053", "054", "055", "059"],
-          },
-          {
-            id: "momo_telecel",
-            kind: "mobile_money",
-            label: "Telecel Cash",
-            enabled: true,
-            networkProvider: "Vodafone",
-            institutionCode: "0006",
-            phonePrefixes: ["020", "050"],
-          },
-          {
-            id: "momo_airteltigo",
-            kind: "mobile_money",
-            label: "AirtelTigo Money",
-            enabled: true,
-            networkProvider: "AirtelTigo",
-            institutionCode: "0005",
-            phonePrefixes: ["026", "027", "056", "057"],
-          },
-          {
-            id: "bank_transfer",
-            kind: "bank_transfer",
-            label: "Bank transfer",
-            enabled: true,
-          },
-          {
-            id: "card",
-            kind: "card",
-            label: "Card",
-            enabled: false,
-          },
-        ],
-      },
-      {
-        code: "NG",
-        currency: "NGN",
-        enabled: true,
-        quickAmounts: [5000, 10000, 25000, 50000],
-        caps: { minFiat: 3000, maxFiat: 200000 },
-        methods: [
-          {
-            id: "bank_transfer",
-            kind: "bank_transfer",
-            label: "Bank transfer",
-            enabled: true,
-          },
-        ],
-      },
-      {
-        code: "KE",
-        currency: "KES",
-        enabled: false,
-        methods: [
-          {
-            id: "mpesa",
-            kind: "mobile_money",
-            label: "M-Pesa",
-            enabled: false,
-          },
-          {
-            id: "bank_transfer",
-            kind: "bank_transfer",
-            label: "Bank transfer",
-            enabled: false,
-          },
-        ],
-      },
-      {
-        code: "ZA",
-        currency: "ZAR",
-        enabled: false,
-        methods: [
-          {
-            id: "bank_transfer",
-            kind: "bank_transfer",
-            label: "Bank transfer (EFT)",
-            enabled: false,
-          },
-        ],
-      },
-      {
-        code: "CI",
-        currency: "XOF",
-        enabled: false,
-        methods: [
-          {
-            id: "momo_orange",
-            kind: "mobile_money",
-            label: "Orange Money",
-            enabled: false,
-          },
-        ],
-      },
-      {
-        code: "UG",
-        currency: "UGX",
-        enabled: false,
-        methods: [
-          {
-            id: "momo_mtn_ug",
-            kind: "mobile_money",
-            label: "MTN MoMo",
-            enabled: false,
-          },
-        ],
-      },
+      ghana({ caps: { minFiat: 50, maxFiat: 1000 }, card: true }),
+      nigeria({ caps: { minFiat: 3000, maxFiat: 200000 } }),
+      ...plannedMarkets,
     ],
   },
   sell: { enabled: false },

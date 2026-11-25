@@ -1,3 +1,4 @@
+import { ghana, nigeria } from "@/config/markets";
 import type { ShopConfigInput } from "@/config/schema";
 
 /**
@@ -25,65 +26,7 @@ const griotConfig = {
   },
   countries: {
     default: "GH",
-    list: [
-      {
-        code: "GH",
-        currency: "GHS",
-        enabled: true,
-        quickAmounts: [50, 100, 200, 500],
-        caps: { minFiat: 50, maxFiat: 2900 },
-        methods: [
-          {
-            id: "momo_mtn",
-            kind: "mobile_money",
-            label: "MTN MoMo",
-            enabled: true,
-            networkProvider: "MTN",
-            institutionCode: "0004",
-            phonePrefixes: ["024", "025", "053", "054", "055", "059"],
-          },
-          {
-            id: "momo_telecel",
-            kind: "mobile_money",
-            label: "Telecel Cash",
-            enabled: true,
-            networkProvider: "Vodafone",
-            institutionCode: "0006",
-            phonePrefixes: ["020", "050"],
-          },
-          {
-            id: "momo_airteltigo",
-            kind: "mobile_money",
-            label: "AirtelTigo Money",
-            enabled: true,
-            networkProvider: "AirtelTigo",
-            institutionCode: "0005",
-            phonePrefixes: ["026", "027", "056", "057"],
-          },
-          {
-            id: "bank_transfer",
-            kind: "bank_transfer",
-            label: "Bank transfer",
-            enabled: true,
-          },
-        ],
-      },
-      {
-        code: "NG",
-        currency: "NGN",
-        enabled: true,
-        quickAmounts: [5000, 10000, 25000, 50000],
-        caps: { minFiat: 3000, maxFiat: 5000000 },
-        methods: [
-          {
-            id: "bank_transfer",
-            kind: "bank_transfer",
-            label: "Bank transfer",
-            enabled: true,
-          },
-        ],
-      },
-    ],
+    list: [ghana(), nigeria()],
   },
   sell: { enabled: false },
   fees: { showFeeLine: true },

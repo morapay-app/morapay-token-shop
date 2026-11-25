@@ -22,18 +22,3 @@ export function resolveReferral(opts: {
   if (isValidReferral(opts.config)) return opts.config;
   return undefined;
 }
-
-export function extractQueryReferral(
-  searchParams: URLSearchParams | Record<string, string | string[] | undefined>,
-): string | undefined {
-  const get = (k: string) => {
-    if (searchParams instanceof URLSearchParams) return searchParams.get(k);
-    const v = searchParams[k];
-    return Array.isArray(v) ? v[0] : v;
-  };
-  for (const key of ["ref", "referral", "referral_code"]) {
-    const v = get(key);
-    if (isValidReferral(v)) return v;
-  }
-  return undefined;
-}

@@ -2,9 +2,12 @@
 
 import { shopConfig } from "@/shop.config";
 import { getChain } from "@/config/chains";
+import { chainKindSpec } from "@/config/chain-kinds";
 
 export function TokenInfo() {
   const chain = getChain(shopConfig.token.chainId);
+  const nativeNote =
+    chain && chainKindSpec(chain).nativeOnlyNote?.(shopConfig.token.ticker, chain.name);
   const explorer =
     shopConfig.token.explorerTokenUrl ??
     (chain ? chain.explorerAddress(shopConfig.token.contract) : "#");
@@ -34,11 +37,8 @@ export function TokenInfo() {
           </div>
         </div>
         <p className="text-sm">{shopConfig.token.description}</p>
-        {chain?.kind === "pi" ? (
-          <p className="text-sm text-[var(--mp-warning-text)]">
-            Native {shopConfig.token.ticker} on {chain.name} only. Not a BNB
-            Chain or other wrapped token.
-          </p>
+        {nativeNote ? (
+          <p className="text-sm text-[var(--mp-warning-text)]">{nativeNote}</p>
         ) : (
         <>
         <div className="subcard p-3">

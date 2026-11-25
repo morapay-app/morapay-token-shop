@@ -8,6 +8,7 @@ import {
   isValidXAddress,
 } from "ripple-address-codec";
 import { getChain } from "@/config/chains";
+import type { ChainKind } from "@/config/chain-kinds";
 import { validatePiAddress } from "./pi-address";
 
 export type AddressValidation =
@@ -56,41 +57,88 @@ export function parseXrplWalletInput(
   return null;
 }
 
-/** Read embedded destination tag from a mainnet X-address (for UI prefill). */
-export function getXrplEmbeddedDestinationTag(input: string): number | undefined {
-  const parsed = parseXrplWalletInput(input);
-  return parsed?.embeddedDestinationTag;
+type AddressRules = {
+  validate: (address: string, tokenContract?: string) => AddressValidation;
+  /** Same account, same key: for rate limits and comparisons. */
+  key: (address: string) => string;
+};
+
+const bad = (reason: string): AddressValidation => ({ ok: false, reason });
+
+function validateEvm(address: string, tokenContract?: string): AddressValidation {
+  if (!isAddress(address, { strict: false })) return bad("Enter a valid wallet address.");
+  let normalized: string;
+  try {
+    normalized = getAddress(address);
+  } catch {
+    return bad("Enter a valid wallet address.");
+  }
+  if (normalized.toLowerCase() === ZERO) return bad("That address cannot receive tokens.");
+  if (tokenContract && normalized.toLowerCase() === tokenContract.toLowerCase()) {
+    return bad("Do not enter the token contract address. Use your own wallet.");
+  }
+  return { ok: true, normalized };
+}
+
+function validateSolana(address: string, tokenContract?: string): AddressValidation {
+  try {
+    if (bs58.decode(address).length !== 32) return bad("Enter a valid Solana address.");
+  } catch {
+    return bad("Enter a valid Solana address.");
+  }
+  if (tokenContract && address.toLowerCase() === tokenContract.toLowerCase()) {
+    return bad("Do not enter the token mint address. Use your own wallet.");
+  }
+  return { ok: true, normalized: address };
+}
+
+function validateXrpl(address: string, tokenContract?: string): AddressValidation {
+  const parsed = parseXrplWalletInput(address);
+  if (!parsed) {
+    return bad(
+      "Enter a valid XRPL address (classic r… or mainnet X-address). Testnet X-addresses are not supported.",
+    );
+  }
+  if (tokenContract && parsed.classicAddress.toLowerCase() === tokenContract.toLowerCase()) {
+    return bad("Do not enter the native asset id. Use your own wallet.");
+  }
+  return {
+    ok: true,
+    normalized: parsed.classicAddress,
+    embeddedDestinationTag: parsed.embeddedDestinationTag,
+  };
+}
+
+/** One entry per chain kind; other per-kind rules live in config/chain-kinds.ts. */
+const RULES: Record<ChainKind, AddressRules> = {
+  evm: { validate: validateEvm, key: (a) => a.toLowerCase() },
+  solana: { validate: validateSolana, key: (a) => a },
+  xrpl: {
+    validate: validateXrpl,
+    key: (a) => parseXrplWalletInput(a)?.classicAddress ?? a,
+  },
+  pi: {
+    validate: (a) => validatePiAddress(a),
+    key: (a) => a.trim().toUpperCase(),
+  },
+  other: {
+    validate: () => bad("Unsupported chain for address validation."),
+    key: (a) => a,
+  },
+};
+
+function rulesFor(chainId: number): AddressRules | undefined {
+  const chain = getChain(chainId);
+  return chain && RULES[chain.kind];
 }
 
 /** Normalised key for rate limits / lookups (EVM lowercase, XRPL canonical). */
 export function walletStorageKey(address: string, chainId: number): string {
-  const chain = getChain(chainId);
-  if (chain?.kind === "evm") return address.toLowerCase();
-  if (chain?.kind === "xrpl") {
-    return parseXrplWalletInput(address)?.classicAddress ?? address;
-  }
-  if (chain?.kind === "pi") return address.trim().toUpperCase();
-  return address;
+  return rulesFor(chainId)?.key(address) ?? address;
 }
 
-export function walletAddressesEqual(
-  a: string,
-  b: string,
-  chainId: number,
-): boolean {
-  const chain = getChain(chainId);
-  if (chain?.kind === "evm") {
-    return a.toLowerCase() === b.toLowerCase();
-  }
-  if (chain?.kind === "xrpl") {
-    const left = parseXrplWalletInput(a)?.classicAddress ?? a;
-    const right = parseXrplWalletInput(b)?.classicAddress ?? b;
-    return left === right;
-  }
-  if (chain?.kind === "pi") {
-    return a.trim().toUpperCase() === b.trim().toUpperCase();
-  }
-  return a === b;
+export function walletAddressesEqual(a: string, b: string, chainId: number): boolean {
+  return walletStorageKey(a, chainId) === walletStorageKey(b, chainId);
 }
 
 export function validateWalletAddress(
@@ -99,86 +147,8 @@ export function validateWalletAddress(
   tokenContract?: string,
 ): AddressValidation {
   const trimmed = address.trim();
-  if (!trimmed) return { ok: false, reason: "Enter a wallet address." };
-
-  const chain = getChain(chainId);
-  if (!chain) return { ok: false, reason: "Unsupported chain." };
-
-  if (chain.kind === "evm") {
-    if (!isAddress(trimmed, { strict: false })) {
-      return { ok: false, reason: "Enter a valid wallet address." };
-    }
-    let normalized: string;
-    try {
-      normalized = getAddress(trimmed);
-    } catch {
-      return { ok: false, reason: "Enter a valid wallet address." };
-    }
-    if (normalized.toLowerCase() === ZERO) {
-      return { ok: false, reason: "That address cannot receive tokens." };
-    }
-    if (
-      tokenContract &&
-      normalized.toLowerCase() === tokenContract.toLowerCase()
-    ) {
-      return {
-        ok: false,
-        reason: "Do not enter the token contract address. Use your own wallet.",
-      };
-    }
-    return { ok: true, normalized };
-  }
-
-  if (chain.kind === "solana") {
-    try {
-      const decoded = bs58.decode(trimmed);
-      if (decoded.length !== 32) {
-        return { ok: false, reason: "Enter a valid Solana address." };
-      }
-      if (
-        tokenContract &&
-        trimmed.toLowerCase() === tokenContract.toLowerCase()
-      ) {
-        return {
-          ok: false,
-          reason:
-            "Do not enter the token mint address. Use your own wallet.",
-        };
-      }
-      return { ok: true, normalized: trimmed };
-    } catch {
-      return { ok: false, reason: "Enter a valid Solana address." };
-    }
-  }
-
-  if (chain.kind === "xrpl") {
-    const parsed = parseXrplWalletInput(trimmed);
-    if (!parsed) {
-      return {
-        ok: false,
-        reason:
-          "Enter a valid XRPL address (classic r… or mainnet X-address). Testnet X-addresses are not supported.",
-      };
-    }
-    if (
-      tokenContract &&
-      parsed.classicAddress.toLowerCase() === tokenContract.toLowerCase()
-    ) {
-      return {
-        ok: false,
-        reason: "Do not enter the native asset id. Use your own wallet.",
-      };
-    }
-    return {
-      ok: true,
-      normalized: parsed.classicAddress,
-      embeddedDestinationTag: parsed.embeddedDestinationTag,
-    };
-  }
-
-  if (chain.kind === "pi") {
-    return validatePiAddress(trimmed);
-  }
-
-  return { ok: false, reason: "Unsupported chain for address validation." };
+  if (!trimmed) return bad("Enter a wallet address.");
+  const rules = rulesFor(chainId);
+  if (!rules) return bad("Unsupported chain.");
+  return rules.validate(trimmed, tokenContract);
 }

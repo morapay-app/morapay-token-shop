@@ -1,17 +1,12 @@
 import { Header } from "@/components/Header";
 import { BuyWidget } from "@/components/BuyWidget/BuyWidget";
 import { shopConfig } from "@/shop.config";
+import type { HomeProps } from "./types";
 
-export function WikiCatHome({
-  headline,
-  subline,
-}: {
-  headline: string;
-  subline?: string;
-}) {
+export function WikiCatHome({ headline, subline }: HomeProps) {
   return (
     <section className="wikicat-hero" aria-label="Wiki Cat">
-      <Header wikiCat />
+      <Header variant="wikicat" />
       <div className="wikicat-hero-inner">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

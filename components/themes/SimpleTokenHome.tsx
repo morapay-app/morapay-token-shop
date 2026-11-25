@@ -1,18 +1,13 @@
 import { Header } from "@/components/Header";
 import { BuyWidget } from "@/components/BuyWidget/BuyWidget";
 import { shopConfig } from "@/shop.config";
+import type { HomeProps } from "./types";
 
 /** Minimal hero: logo, token title, headline/subline, buy widget (WikiCat-style). */
-export function SimpleTokenHome({
-  headline,
-  subline,
-}: {
-  headline: string;
-  subline?: string;
-}) {
+export function SimpleTokenHome({ headline, subline }: HomeProps) {
   return (
     <section className="brand-hero" aria-label={shopConfig.token.name}>
-      <Header brandHero />
+      <Header variant="simple" />
       <div className="brand-hero-inner">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

@@ -7,6 +7,7 @@ import {
   validateDestinationTag,
 } from "@/lib/validate/destination-tag";
 import { getChain } from "@/config/chains";
+import { chainKindSpec } from "@/config/chain-kinds";
 import { walletAddressGroups, walletConfirmKey } from "@/lib/wallet-confirm";
 
 type Props = {
@@ -35,6 +36,7 @@ export function WalletStep(props: Props) {
   /** Key of the address + tag the buyer last confirmed; any edit no longer matches it. */
   const [confirmedKey, setConfirmedKey] = useState<string | null>(null);
   const chain = getChain(chainId);
+  const spec = chainKindSpec(chain);
   const validation = useMemo(
     () =>
       wallet
@@ -99,23 +101,12 @@ export function WalletStep(props: Props) {
     onNext();
   }
 
-  const placeholder =
-    chain?.kind === "solana"
-      ? "Solana address"
-      : chain?.kind === "xrpl"
-        ? "r… or X-address"
-        : chain?.kind === "pi"
-          ? "G…"
-          : "0x…";
-
   return (
     <div className="space-y-5">
       <h2 className="font-heading text-xl font-bold">Wallet</h2>
       <div>
         <label htmlFor="wallet" className="label">
-          {chain?.kind === "pi"
-            ? "Pi wallet address"
-            : `Your ${chain?.name ?? "chain"} wallet address`}
+          {spec.wallet.buyLabel(chain?.name ?? "chain")}
         </label>
         <div className="flex gap-2">
           <input
@@ -123,7 +114,7 @@ export function WalletStep(props: Props) {
             className="field font-mono text-sm"
             value={wallet}
             onChange={(e) => onWallet(e.target.value)}
-            placeholder={placeholder}
+            placeholder={spec.wallet.buyPlaceholder}
             spellCheck={false}
             autoComplete="off"
             aria-invalid={validation ? !validation.ok : undefined}
@@ -134,21 +125,17 @@ export function WalletStep(props: Props) {
           </button>
         </div>
         <p id="wallet-help" className="text-sm text-[var(--mp-text-muted)] mt-2">
-          {chain?.kind === "xrpl" ? (
-            "Use your XRPL classic address (r…) or mainnet X-address. Exchanges often require a destination tag below."
-          ) : chain?.kind === "pi" ? (
+          {spec.wallet.buyHelp.text}
+          {spec.wallet.buyHelp.tip && (
             <>
-              Must be a Pi Network wallet (starts with G), not PI on BNB or
-              another chain.{" "}
+              {" "}
               <span
                 className="underline decoration-dotted cursor-help"
-                title="Open the Pi Wallet app and tap Receive to copy your G… address. PI sent to a BNB Chain or exchange deposit address for another network can't be recovered."
+                title={spec.wallet.buyHelp.tip}
               >
-                Where?
+                {spec.wallet.buyHelp.tipLabel}
               </span>
             </>
-          ) : (
-            "Find this in Trust Wallet, Binance Wallet, or MetaMask under Receive."
           )}
         </p>
         {validation && !validation.ok && (
@@ -158,7 +145,7 @@ export function WalletStep(props: Props) {
         )}
       </div>
 
-      {chain?.kind === "xrpl" && (
+      {spec.payoutTag && (
         <div>
           <label htmlFor="dest-tag" className="label">
             Destination tag (optional)
@@ -218,7 +205,7 @@ export function WalletStep(props: Props) {
               </span>
             ))}
           </p>
-          {chain?.kind === "xrpl" && (
+          {spec.payoutTag && (
             <p className="text-sm text-[var(--mp-text-muted)]">
               Destination tag:{" "}
               <span className="font-mono text-[var(--mp-text)]">
@@ -235,7 +222,7 @@ export function WalletStep(props: Props) {
             />
             <span>
               I checked the start and end of this address against my wallet
-              {chain?.kind === "xrpl" ? " and the destination tag" : ""}. Crypto
+              {spec.payoutTag ? " and the destination tag" : ""}. Crypto
               sent to a wrong address can&apos;t be recovered.
             </span>
           </label>

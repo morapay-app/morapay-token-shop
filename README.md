@@ -8,7 +8,7 @@ Cloneable **Next.js** template for community token shops. Each business runs its
 
 - Buyers pay with **mobile money or bank**; tokens settle to their wallet.
 - The browser **never** talks to `api.morapay.io` — only your Next.js `/api/*` routes do, with **HMAC-signed** merchant requests.
-- Branding, token, countries, and payment methods come from **`shop.config.ts`** + `/public/brand/*` + env vars.
+- Branding, token, countries, and payment methods come from **`examples/<shop>.config.ts`** + `/public/brand/*` + env vars.
 
 ## Get Morapay merchant keys
 
@@ -39,7 +39,7 @@ See [`.env.example`](.env.example).
 ## Launch a shop in 5 minutes
 
 1. **Fork / clone** this repo.
-2. **`pnpm new-shop`** or edit `shop.config.ts` (start from `examples/milan.config.ts` or `examples/amem.config.ts`).
+2. **`pnpm new-shop`** (see [Adding a shop](#adding-a-shop)).
 3. **Brand assets** in `/public/brand/`.
 4. **Set env vars** (merchant keys + `SHOP_ID` + `NEXT_PUBLIC_SITE_URL`).
 5. **Deploy** — open `/api/health` → expect `merchantSigning: true` and `tokenSupported: true` when your token is listed on the merchant ramp config.
@@ -90,19 +90,42 @@ Orders are created via **`/api/v1/merchant/ramp/*`** signed with **your** mercha
 - Rotate secret keys immediately if leaked; update Railway/Vercel env and redeploy.
 - Buyer IPs are forwarded on outbound Morapay calls (`X-Forwarded-For`, `X-Real-IP`) so ramp abuse keys on shoppers, not your host egress IP.
 
-## What you edit for a new shop
+## Adding a shop
+
+One repo builds every shop; `SHOP_ID` picks which.
+
+1. `pnpm new-shop` (or copy a file in `examples/` and list it in `SHOPS` in `shop.config.ts`).
+2. Countries: use the presets in `config/markets.ts`, e.g. `list: [ghana(), nigeria()]`.
+3. Brand files in `public/brand/<shopId>/`.
+4. Wording: the default copy is for community tokens. Override it with `copy` (`about`, `operator`, `risk`) and `faqExtra`.
+5. Look: set `brand.layoutVariant` to an existing theme, or add one (below).
+6. Deploy with `SHOP_ID=<shopId>`, `NEXT_PUBLIC_SITE_URL` and the merchant keys.
+
+Components never test `shopId` or the chain. Per-shop and per-chain differences live here:
 
 | Path | Purpose |
 |---|---|
-| `shop.config.ts` | Token, branding, countries, methods, sell toggle, Telegram |
-| `public/brand/*` | Logo, hero, favicon |
-| Env vars | Merchant keys, `SHOP_ID`, site URL |
+| `examples/*.config.ts` | One file per shop: token, brand, countries, sell limits, wording |
+| `shop.config.ts` | Shop list; validates the one `SHOP_ID` selects |
+| `config/markets.ts` | Country and payment-method presets |
+| `config/chains.ts` | Networks and explorers |
+| `config/chain-kinds.ts` | Per chain kind: address labels and placeholders, native asset, memo or destination tag, tx hash |
+| `lib/validate/address.ts` | Address validation per chain kind |
+| `config/themes.ts` | Per theme: page class, header style, browser and share-image colours |
+| `components/themes/`, `app/themes/*.css` | Each theme's home hero and styles |
+| `components/og/` | Share images (`brand.ogImage`) |
+| `lib/shop-copy.ts` | Default FAQ and risk text |
+| `components/BuyWidget/`, `components/SellWidget/` | Buy and sell flows, shared by every shop |
+
+**New theme:** add the name to `layoutVariant` in `config/schema.ts`, an entry in `THEMES` and `HOMES`, and a stylesheet imported in `app/layout.tsx`.
+**New chain kind:** add it to `ChainInfo["kind"]`; TypeScript then asks for its `CHAIN_KINDS` and address `RULES` entries.
 
 ## Architecture
 
 - Next.js 15 App Router, TypeScript, Tailwind v4, zod
 - `lib/morapay/sign.ts` — HMAC v1 (`Morapay-Key`, `Morapay-Timestamp`, `Morapay-Signature`)
 - `lib/morapay/client.ts` — signed fetch + envelope parsing
+- Sells: `components/SellWidget/InstitutionPicker.tsx` lists banks and networks by name; NGN accounts must pass the name check (`POST /api/institutions/resolve`) before Continue
 - Fallback: Telegram desk when token unsupported or `FORCE_FALLBACK=true`
 
 ## Default example

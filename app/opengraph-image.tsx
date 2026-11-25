@@ -1,94 +1,17 @@
 import { ImageResponse } from "next/og";
-import { resolveHomeLayoutVariant } from "@/lib/home-layout";
+import { DefaultOgImage } from "@/components/og/DefaultOgImage";
+import { PiOgImage } from "@/components/og/PiOgImage";
+import { XrpOgImage } from "@/components/og/XrpOgImage";
 import { shopConfig } from "@/shop.config";
-import { XrpOgImage } from "./xrp-og";
-import { PiOgImage } from "./pi-og";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OgImage() {
-  if (shopConfig.shopId === "xrp") {
-    return new ImageResponse(<XrpOgImage />, { ...size });
-  }
-  if (shopConfig.shopId === "pi") {
-    return new ImageResponse(<PiOgImage />, { ...size });
-  }
-  const ticker = `$${shopConfig.token.ticker}`;
-  const accent = shopConfig.brand.accent;
-  const wikicat = resolveHomeLayoutVariant(shopConfig) === "wikicat";
-  const stageBg = wikicat
-    ? "#9DE7F1"
-    : (shopConfig.culture?.stageBg ?? "#0A0A0A");
-  const stageText = wikicat
-    ? "#0A0A0A"
-    : (shopConfig.culture?.stageText ?? "#F5F1E6");
+const DESIGNS = { xrp: XrpOgImage, pi: PiOgImage };
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: 64,
-          background: stageBg,
-          color: stageText,
-          fontFamily: "sans-serif",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            color: accent,
-            fontSize: 28,
-            fontWeight: 700,
-          }}
-        >
-          {ticker}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              fontSize: 64,
-              fontWeight: 800,
-              lineHeight: 1.1,
-            }}
-          >
-            {`Buy ${ticker}`}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 28,
-              color: "rgba(245,241,230,0.65)",
-            }}
-          >
-            with mobile money or bank
-          </div>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 22,
-            color: accent,
-          }}
-        >
-          Powered by Morapay
-        </div>
-      </div>
-    ),
-    { ...size },
-  );
+export default function OgImage() {
+  const design = shopConfig.brand.ogImage;
+  const Design = design ? DESIGNS[design] : DefaultOgImage;
+  return new ImageResponse(<Design />, { ...size });
 }

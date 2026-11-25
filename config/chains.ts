@@ -89,10 +89,4 @@ export function getChain(chainId: number): ChainInfo | undefined {
   return chains[chainId];
 }
 
-export function requireChain(chainId: number): ChainInfo {
-  const c = getChain(chainId);
-  if (!c) throw new Error(`Unsupported chainId: ${chainId}`);
-  return c;
-}
-
 export { chains };

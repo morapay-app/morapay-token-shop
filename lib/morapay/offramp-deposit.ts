@@ -1,4 +1,5 @@
 import { getChain } from "@/config/chains";
+import { chainKindSpec } from "@/config/chain-kinds";
 
 /**
  * Deposit instructions for a sell (offramp) order, read from core's initiate / transaction
@@ -112,15 +113,15 @@ export const PI_MEMO_MAX_BYTES = 28;
 
 /** Refuse to show deposit instructions the user could act on wrongly. Terse, user-facing. */
 export function offrampDepositError(chainId: number, info: OfframpDeposit): string | null {
-  const kind = getChain(chainId)?.kind;
-  if (kind === "xrpl") {
+  const reference = chainKindSpec(getChain(chainId)).depositReference;
+  if (reference === "destination_tag") {
     if (!info.depositAddress) return "Missing platform deposit address. Please contact support.";
     if (info.depositDestinationTag == null || String(info.depositDestinationTag).trim() === "") {
       return "Missing deposit destination tag. Do not send XRP until support provides a tag.";
     }
     return null;
   }
-  if (kind === "pi") {
+  if (reference === "memo") {
     if (!info.depositAddress) return "Missing deposit address. Do not send PI. Contact support.";
     if (!info.depositMemo) return "Missing deposit memo. Do not send PI. Contact support.";
     if (new TextEncoder().encode(info.depositMemo).length > PI_MEMO_MAX_BYTES) {
