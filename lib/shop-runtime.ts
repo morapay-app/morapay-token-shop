@@ -128,6 +128,7 @@ export async function resolveRequestToken(
 ): Promise<{ ok: true; token: ShopToken } | { ok: false; status: number; code: string; message: string }> {
   const token = findShopToken(shopConfig, ticker);
   if (!token) return { ok: false, status: 400, code: "token.unknown", message: "Token not available." };
+  if (token.comingSoon) return { ok: false, status: 400, code: "token.coming_soon", message: `${token.ticker} is coming soon.` };
   if (token.primary) return { ok: true, token };
   const offered = (await offeredShopTokens()).find((t) => t.ticker === token.ticker);
   const available = direction === "buy" ? offered?.buyAvailable : offered?.sellAvailable;

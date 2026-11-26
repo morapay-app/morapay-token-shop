@@ -20,6 +20,22 @@ const core = vi.hoisted(() => ({
   confirmOfframp: vi.fn(),
 }));
 
+/**
+ * The multi-token mechanics are tested with PI open and selling on ("open"); the Pi shop as shipped
+ * (PI coming soon, sell tab off until the PCM approve policy is live) is tested on its own below.
+ */
+const piVariant = vi.hoisted(() => ({ open: true }));
+vi.mock("@/examples/pi.config", async (importOriginal) => {
+  type Cfg = { token: Record<string, unknown>; sell: Record<string, unknown> } & Record<string, unknown>;
+  const real = ((await importOriginal()) as { default: Cfg }).default;
+  const open = { ...real, token: { ...real.token, comingSoon: false }, sell: { ...real.sell, enabled: true } };
+  // A getter: Vitest caches this factory's result, so the variant is read whenever a module loads it.
+  return {
+    get default() {
+      return piVariant.open ? open : real;
+    },
+  };
+});
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 vi.mock("@/lib/morapay/merchant-config", () => ({
   merchantSigningEnabled: () => true,
@@ -239,3 +255,52 @@ describe("routes", { timeout: 30_000 }, () => {
     expect(core.initiateOfframp).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("the Pi shop as shipped: PCM now, PI coming soon", { timeout: 30_000 }, () => {
+  beforeEach(() => {
+    piVariant.open = false;
+    vi.resetModules();
+  });
+  afterEach(() => {
+    piVariant.open = true;
+    vi.resetModules();
+  });
+
+  it("defaults to PCM and shows PI as coming soon, with buying and selling off", async () => {
+    const { ShopConfigSchema } = await import("@/config/schema");
+    const { shopTokens, findShopToken } = await import("@/lib/shop-tokens");
+    const pi = ShopConfigSchema.parse((await import("@/examples/pi.config")).default);
+    expect(findShopToken(pi, null)?.ticker).toBe("PCM");
+    const [piToken] = shopTokens(pi);
+    expect(piToken).toMatchObject({ ticker: "PI", comingSoon: true, buyEnabled: false, sellEnabled: false });
+    const { GET } = await import("@/app/api/config/route");
+    const json = await (await GET(new Request("https://pi.morapay.shop/api/config"))).json();
+    expect(json.data.tokens.map((t: { ticker: string; comingSoon: boolean; buy: boolean }) => [t.ticker, t.comingSoon, t.buy])).toEqual([
+      ["PI", true, false],
+      ["PCM", false, true],
+    ]);
+  });
+
+  it("quotes PCM by default and refuses PI as coming soon", async () => {
+    expect((await call("quote", { action: "ONRAMP", inputAmount: "500", inputCurrency: "GHS" })).status).toBe(200);
+    expect(core.getQuote).toHaveBeenLastCalledWith(expect.objectContaining({ outputCurrency: "PCM", chain: "10" }), expect.anything());
+    core.getQuote.mockClear();
+    const pi = await call("quote", { action: "ONRAMP", inputAmount: "500", inputCurrency: "GHS", token: "PI" });
+    expect(pi).toMatchObject({ status: 400, json: { code: "token.coming_soon", message: "PI is coming soon." } });
+    expect(core.getQuote).not.toHaveBeenCalled();
+  });
+
+  it("opens no sell while the sell tab is off", async () => {
+    const res = await call("sell", {
+      tokenAmount: "1000",
+      currency: "GHS",
+      walletAddress: EVM_WALLET,
+      bankCode: "MTN",
+      accountNumber: "0244123456",
+      token: "PCM",
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(core.initiateOfframp).not.toHaveBeenCalled();
+  });
+});
+

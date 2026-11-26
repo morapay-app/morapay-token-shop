@@ -6,6 +6,8 @@ type FiatCaps = { minFiat: number; maxFiat: number };
 /** One token a shop offers: the primary `token`, then any `extraTokens`, in config order. */
 export type ShopToken = ShopConfig["token"] & {
   primary: boolean;
+  /** Shown as "soon" in the picker; no buys or sells. */
+  comingSoon: boolean;
   /** Picker label. */
   label: string;
   /** Tooltip under the picker. */
@@ -23,10 +25,11 @@ export function shopTokens(shop: ShopConfig): ShopToken[] {
   const primary: ShopToken = {
     ...shop.token,
     primary: true,
+    comingSoon: shop.token.comingSoon === true,
     label: shop.token.ticker,
     chainName: getChain(shop.token.chainId)?.name ?? "",
-    buyEnabled: true,
-    sellEnabled: shop.sell.enabled,
+    buyEnabled: shop.token.comingSoon !== true,
+    sellEnabled: shop.token.comingSoon !== true && shop.sell.enabled,
     buyCaps: {},
     sellMinToken: shop.sell.minToken,
     sellMaxToken: shop.sell.maxToken,
@@ -34,11 +37,12 @@ export function shopTokens(shop: ShopConfig): ShopToken[] {
   const extras = (shop.extraTokens ?? []).map(({ label, hint, buy, sell, ...token }): ShopToken => ({
     ...token,
     primary: false,
+    comingSoon: token.comingSoon === true,
     label: label ?? token.ticker,
     ...(hint ? { hint } : {}),
     chainName: getChain(token.chainId)?.name ?? "",
-    buyEnabled: buy.enabled,
-    sellEnabled: shop.sell.enabled && sell.enabled,
+    buyEnabled: token.comingSoon !== true && buy.enabled,
+    sellEnabled: token.comingSoon !== true && shop.sell.enabled && sell.enabled,
     buyCaps: Object.fromEntries(Object.entries(buy.caps).map(([currency, caps]) => [currency.toUpperCase(), caps])),
     sellMinToken: sell.minToken,
     sellMaxToken: sell.maxToken,
@@ -53,7 +57,8 @@ export function shopTokens(shop: ShopConfig): ShopToken[] {
 export function findShopToken(shop: ShopConfig, ticker?: string | null): ShopToken | null {
   const tokens = shopTokens(shop);
   const wanted = ticker?.trim().toUpperCase();
-  if (!wanted) return tokens[0]!;
+  // No ticker: the first token that is open (a "coming soon" primary is skipped).
+  if (!wanted) return tokens.find((token) => !token.comingSoon) ?? tokens[0]!;
   return tokens.find((token) => token.ticker.toUpperCase() === wanted) ?? null;
 }
 

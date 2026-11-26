@@ -20,9 +20,10 @@ export async function GET(req: Request) {
     const countries = mergeCountries(shop, live, "buy");
     // Primary first. An extra token is listed only in the directions core offers it right now.
     const tokens = (await offeredShopTokens())
-      .filter((t) => t.primary || t.buyAvailable || t.sellAvailable)
+      .filter((t) => t.primary || t.comingSoon || t.buyAvailable || t.sellAvailable)
       .map((t) => ({
         ticker: t.ticker,
+        comingSoon: t.comingSoon,
         name: t.name,
         label: t.label,
         hint: t.hint,

@@ -70,6 +70,8 @@ export const TokenSchema = z.object({
   logo: z.string(),
   description: z.string().max(280),
   explorerTokenUrl: z.string().url().optional(),
+  /** Shown in the picker as "soon", never selectable; buys and sells are refused. */
+  comingSoon: z.boolean().optional(),
 });
 
 const FiatCapsSchema = z.object({ minFiat: z.number().positive(), maxFiat: z.number().positive() });

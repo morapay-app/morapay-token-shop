@@ -26,7 +26,8 @@ import { TokenPicker } from "@/components/TokenPicker";
 
 const CURRENCIES = shopCurrencies(shopConfig);
 /** Tokens this shop sells, primary first (core availability is checked on load). */
-const SELL_TOKENS = shopTokens(shopConfig).filter((t) => t.sellEnabled);
+const SELL_TOKENS = shopTokens(shopConfig).filter((t) => t.sellEnabled || t.comingSoon);
+const FIRST_SELLABLE = SELL_TOKENS.find((t) => !t.comingSoon) ?? SELL_TOKENS[0];
 const DEFAULT_CURRENCY =
   shopConfig.countries.list.find((c) => c.code === shopConfig.countries.default)?.currency.toUpperCase() ??
   CURRENCIES[0];
@@ -36,7 +37,7 @@ const DEFAULT_CURRENCY =
  * Deposit address must never equal the token contract.
  */
 export function SellWidget() {
-  const [ticker, setTicker] = useState(SELL_TOKENS[0]?.ticker ?? shopConfig.token.ticker);
+  const [ticker, setTicker] = useState(FIRST_SELLABLE?.ticker ?? shopConfig.token.ticker);
   /** Extra tokens core is not offering for sale right now; null until the config loads. */
   const [offered, setOffered] = useState<string[] | null>(null);
   const [amount, setAmount] = useState("");
@@ -59,8 +60,9 @@ export function SellWidget() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const pickerTokens = SELL_TOKENS.filter((t) => t.primary || offered?.includes(t.ticker));
-  const token = pickerTokens.find((t) => t.ticker === ticker) ?? pickerTokens[0] ?? SELL_TOKENS[0]!;
+  const pickerTokens = SELL_TOKENS.filter((t) => t.comingSoon || t.primary || offered?.includes(t.ticker));
+  const sellable = pickerTokens.filter((t) => !t.comingSoon);
+  const token = sellable.find((t) => t.ticker === ticker) ?? sellable[0] ?? FIRST_SELLABLE ?? SELL_TOKENS[0]!;
   const chain = getChain(token.chainId);
   const spec = chainKindSpec(chain);
   const tagRequired = spec.depositReference === "destination_tag";

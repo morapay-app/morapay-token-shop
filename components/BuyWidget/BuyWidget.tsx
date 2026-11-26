@@ -33,6 +33,8 @@ type ApiToken = {
   logo: string;
   buy: boolean;
   sell: boolean;
+  /** Shown as "soon" in the picker, never selectable. */
+  comingSoon?: boolean;
   buyCaps?: Record<string, { minFiat: number; maxFiat: number }>;
 };
 
@@ -135,7 +137,9 @@ export function BuyWidget() {
   }, []);
 
   const activeCountry = config?.countries.find((c) => c.code === state.country);
-  const buyTokens = (config?.tokens ?? []).filter((t) => t.buy);
+  const buyTokens = (config?.tokens ?? []).filter((t) => t.buy && !t.comingSoon);
+  /** The picker also shows "coming soon" tokens (greyed out). */
+  const pickerTokens = (config?.tokens ?? []).filter((t) => (t.buy && !t.comingSoon) || t.comingSoon);
   const token = buyTokens.find((t) => t.ticker === ticker) ?? buyTokens[0] ?? config?.token;
   const tokenTicker = token?.ticker ?? "";
   const buyLimits = narrowCaps(
@@ -446,9 +450,9 @@ export function BuyWidget() {
         </p>
       )}
 
-      {state.step === "amount" && buyTokens.length > 1 && (
+      {state.step === "amount" && pickerTokens.length > 1 && (
         <div className="mb-4">
-          <TokenPicker id="buy-token" tokens={buyTokens} value={tokenTicker} onChange={changeToken} />
+          <TokenPicker id="buy-token" tokens={pickerTokens} value={tokenTicker} onChange={changeToken} />
         </div>
       )}
 
