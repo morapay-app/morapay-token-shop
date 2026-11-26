@@ -42,7 +42,7 @@ const piConfig = {
       buy: {
         enabled: true,
         caps: {
-          GHS: { minFiat: 100, maxFiat: 1500 },
+          GHS: { minFiat: 50, maxFiat: 1500 },
           NGN: { minFiat: 10000, maxFiat: 150000 },
         },
       },
@@ -72,10 +72,10 @@ const piConfig = {
     list: [ghana(), nigeria()],
   },
   /**
-   * Off until the sell wallets' Privy policy allows PCM approvals on Optimism; then true.
-   * Core enforces sell value limits on the quote; no shop-level PI floor or cap.
+   * On: the sell wallets' Privy policy allows PCM approvals on Optimism (applied 2026-11-26).
+   * PI sells stay closed while PI is coming soon. Core enforces sell value limits on the quote.
    */
-  sell: { enabled: false },
+  sell: { enabled: true },
   fees: { showFeeLine: true },
   telegram: {
     deskUrl: "https://t.me/morapay",

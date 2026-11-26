@@ -347,5 +347,18 @@ export function toClientError(err: unknown): {
       retryAfterSec: morapay.retryAfterSec,
     };
   }
+  // A route's own refusal ({ message, status: 4xx }, e.g. "Phone number is required.") keeps its
+  // words. Thrown errors and anything 5xx stay generic so internals never reach the browser.
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    !(err instanceof Error) &&
+    typeof (err as { message?: unknown }).message === "string" &&
+    typeof (err as { status?: unknown }).status === "number" &&
+    (err as { status: number }).status >= 400 &&
+    (err as { status: number }).status < 500
+  ) {
+    return { message: (err as { message: string }).message.slice(0, 300) };
+  }
   return { message: "Something went wrong. Please try again." };
 }

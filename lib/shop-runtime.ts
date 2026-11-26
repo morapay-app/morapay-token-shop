@@ -72,11 +72,10 @@ export async function getHealth(): Promise<HealthSnapshot> {
         reason: "unreachable",
       };
     }
-    const tokenSupported = isTokenSupported(
-      config,
-      shopConfig.token.chainId,
-      shopConfig.token.contract,
-    );
+    // The token the shop opens on: the primary, or the first open token when the primary is
+    // "coming soon" (the Pi shop sells PCM while PI waits). A coming-soon PI must not close the shop.
+    const openToken = findShopToken(shopConfig, null) ?? shopConfig.token;
+    const tokenSupported = isTokenSupported(config, openToken.chainId, openToken.contract);
     return {
       morapay: tokenSupported ? "ok" : "fallback",
       tokenSupported,
