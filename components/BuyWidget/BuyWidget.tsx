@@ -34,7 +34,7 @@ type ApiToken = {
   logo: string;
   buy: boolean;
   sell: boolean;
-  /** Shown as "soon" in the picker, never selectable. */
+  /** Shown as "soon" in the picker: selectable for a price only, never ordered. */
   comingSoon?: boolean;
   buyCaps?: Record<string, { minFiat: number; maxFiat: number }>;
 };
@@ -139,9 +139,10 @@ export function BuyWidget() {
 
   const activeCountry = config?.countries.find((c) => c.code === state.country);
   const buyTokens = (config?.tokens ?? []).filter((t) => t.buy && !t.comingSoon);
-  /** The picker also shows "coming soon" tokens (greyed out). */
+  /** The picker also shows "coming soon" tokens: they can be priced, never ordered. */
   const pickerTokens = (config?.tokens ?? []).filter((t) => (t.buy && !t.comingSoon) || t.comingSoon);
-  const token = buyTokens.find((t) => t.ticker === ticker) ?? buyTokens[0] ?? config?.token;
+  const token = pickerTokens.find((t) => t.ticker === ticker) ?? buyTokens[0] ?? config?.token;
+  const quoteOnly = token != null && "comingSoon" in token && token.comingSoon === true;
   const tokenTicker = token?.ticker ?? "";
   const buyLimits = narrowCaps(
     activeCountry?.buyLimits,
@@ -482,8 +483,11 @@ export function BuyWidget() {
             dispatch({ type: "SET_COUNTRY", country: code, currency });
             track("country_changed", { code });
           }}
-          onNext={() => dispatch({ type: "GOTO", step: "payment" })}
+          onNext={() => {
+            if (!quoteOnly) dispatch({ type: "GOTO", step: "payment" });
+          }}
           rateLockSeconds={rateLockSeconds}
+          quoteOnly={quoteOnly}
         />
       )}
 

@@ -6,7 +6,7 @@ export type PickerToken = {
   logo: string;
   chainName: string;
   hint?: string;
-  /** Shown as "soon" and not selectable. */
+  /** Shown as "soon": selectable for a price only (the flow stops at the quote). */
   comingSoon?: boolean;
 };
 
@@ -21,7 +21,7 @@ type Props = {
 /** Compact token switch for shops that offer more than one token. Renders nothing for one. */
 export function TokenPicker({ id, tokens, value, onChange, disabled }: Props) {
   if (tokens.length < 2) return null;
-  const active = tokens.find((t) => t.ticker === value && !t.comingSoon) ?? tokens.find((t) => !t.comingSoon) ?? tokens[0]!;
+  const active = tokens.find((t) => t.ticker === value) ?? tokens.find((t) => !t.comingSoon) ?? tokens[0]!;
   return (
     <div>
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Token" id={id}>
@@ -34,14 +34,13 @@ export function TokenPicker({ id, tokens, value, onChange, disabled }: Props) {
               type="button"
               role="radio"
               aria-checked={on}
-              aria-disabled={soon || undefined}
-              disabled={disabled || soon}
-              title={soon ? `${t.ticker} is coming soon` : t.hint ?? `${t.ticker} on ${t.chainName}`}
+              disabled={disabled}
+              title={soon ? `${t.ticker} is coming soon. Quotes only for now.` : t.hint ?? `${t.ticker} on ${t.chainName}`}
               className={`pill inline-flex items-center gap-2 text-sm px-3 py-2 min-h-11 ${
                 on
                   ? "bg-[var(--mp-pill-active)] text-[var(--mp-text)] font-semibold"
                   : "bg-[var(--mp-pill-inactive)] text-[var(--mp-pill-inactive-text)]"
-              }${soon ? " opacity-60 cursor-not-allowed" : ""}`}
+              }${soon && !on ? " opacity-60" : ""}`}
               onClick={() => onChange(t.ticker)}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

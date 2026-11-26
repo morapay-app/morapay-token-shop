@@ -23,6 +23,7 @@ import {
 import { saveOrderCancel } from "@/lib/order-cancel-copy";
 import { shopTokens } from "@/lib/shop-tokens";
 import { TokenPicker } from "@/components/TokenPicker";
+import { ComingSoonNote } from "@/components/ComingSoonNote";
 
 const CURRENCIES = shopCurrencies(shopConfig);
 /** Tokens this shop sells, primary first (core availability is checked on load). */
@@ -62,7 +63,9 @@ export function SellWidget() {
   const [loading, setLoading] = useState(false);
   const pickerTokens = SELL_TOKENS.filter((t) => t.comingSoon || t.primary || offered?.includes(t.ticker));
   const sellable = pickerTokens.filter((t) => !t.comingSoon);
-  const token = sellable.find((t) => t.ticker === ticker) ?? sellable[0] ?? FIRST_SELLABLE ?? SELL_TOKENS[0]!;
+  // A coming-soon token can be picked for a price; the sell itself stays closed.
+  const token = pickerTokens.find((t) => t.ticker === ticker) ?? sellable[0] ?? FIRST_SELLABLE ?? SELL_TOKENS[0]!;
+  const quoteOnly = token.comingSoon;
   const chain = getChain(token.chainId);
   const spec = chainKindSpec(chain);
   const tagRequired = spec.depositReference === "destination_tag";
@@ -161,7 +164,7 @@ export function SellWidget() {
 
   async function submit() {
     setError(null);
-    if (!accountVerified) return;
+    if (quoteOnly || !accountVerified) return;
     const v = validateWalletAddress(
       wallet,
       token.chainId,
@@ -370,11 +373,12 @@ export function SellWidget() {
           {error}
         </p>
       )}
+      {quoteOnly && <ComingSoonNote ticker={token.ticker} />}
       <button
         type="button"
         className="btn-primary w-full"
         disabled={
-          loading || !payout || !bankCode || !account || !accountVerified || !wallet
+          quoteOnly || loading || !payout || !bankCode || !account || !accountVerified || !wallet
         }
         onClick={() => void submit()}
       >
