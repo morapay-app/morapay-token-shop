@@ -19,6 +19,7 @@ import { useQuoteRateLock } from "./useQuoteRateLock";
 import { CancelOrder } from "@/components/CancelOrder";
 import { saveOrderCancel } from "@/lib/order-cancel-copy";
 import { TokenPicker } from "@/components/TokenPicker";
+import { SmartWalletConfirm, SMART_WALLET_CODE } from "@/components/BuyWidget/SmartWalletConfirm";
 import { narrowCaps } from "@/lib/quote-amount-bounds";
 
 type ApiToken = {
@@ -299,7 +300,7 @@ export function BuyWidget() {
     }
   }, [state.step, pollStatus]);
 
-  async function submitOrder() {
+  async function submitOrder(confirmSmartWallet = false) {
     dispatch({ type: "SUBMIT_START" });
     track("order_started");
     try {
@@ -318,6 +319,7 @@ export function BuyWidget() {
           networkProvider: state.networkProvider || undefined,
           customerName: state.customerName || undefined,
           token: tokenTicker || undefined,
+          ...(confirmSmartWallet ? { confirmSmartWallet: true } : {}),
           // Deliberately send a fake token address — server must ignore it
           target_token_address: "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
         }),
@@ -576,10 +578,20 @@ export function BuyWidget() {
         />
       )}
 
+      {state.step === "error" && state.errorCode === SMART_WALLET_CODE && (
+        <SmartWalletConfirm
+          chainName={token.chainName ?? ""}
+          ticker={token.ticker}
+          wallet={state.wallet}
+          onConfirm={() => void submitOrder(true)}
+          onChangeWallet={() => dispatch({ type: "GOTO", step: "wallet" })}
+        />
+      )}
+
       {(state.step === "delivering" ||
         state.step === "completed" ||
         state.step === "still_processing" ||
-        state.step === "error") && (
+        (state.step === "error" && state.errorCode !== SMART_WALLET_CODE)) && (
         <StatusStep
           step={state.step}
           orderRef={state.ref}
