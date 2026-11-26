@@ -3,6 +3,7 @@ import { getQuote } from "@/lib/morapay/ramp";
 import { asMorapayApiError, isMorapayApiError } from "@/lib/morapay/client";
 import { getShopConfig } from "@/lib/shop-runtime";
 import { jsonOk, jsonErr } from "@/lib/api-response";
+import { bodyIssue, zPositiveAmount } from "@/lib/validate/amount";
 import { onrampAmountBoundsError } from "@/lib/quote-amount-bounds";
 import {
   isBelowMinimumQuoteError,
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 const BodySchema = z.object({
   action: z.enum(["ONRAMP", "OFFRAMP"]).default("ONRAMP"),
-  inputAmount: z.string().regex(/^\d+(\.\d+)?$/),
+  inputAmount: zPositiveAmount,
   inputCurrency: z.string().min(3).max(4),
   outputCurrency: z.string().optional(),
   chain: z.union([z.string(), z.number()]).optional(),
@@ -37,7 +38,11 @@ export async function POST(req: Request) {
     }
 
     const shop = getShopConfig();
-    const body = BodySchema.parse(await req.json());
+    const parsedBody = BodySchema.safeParse(await req.json());
+    if (!parsedBody.success) {
+      return jsonErr({ ...bodyIssue(parsedBody.error), status: 400 }, 400);
+    }
+    const body = parsedBody.data;
     inputCurrency = body.inputCurrency;
 
     if (body.action === "ONRAMP") {

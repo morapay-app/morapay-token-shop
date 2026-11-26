@@ -11,6 +11,7 @@ import {
 import { getShopConfig, getHealth } from "@/lib/shop-runtime";
 import { isNuban, needsAccountName, sellAmountError, shopCurrencies } from "@/lib/sell";
 import { jsonOk, jsonErr } from "@/lib/api-response";
+import { bodyIssue, zPositiveAmount } from "@/lib/validate/amount";
 import { clientIp, rateLimit, RL } from "@/lib/ratelimit";
 import { validateWalletAddress } from "@/lib/validate/address";
 import { REFERRAL_COOKIE, resolveReferral } from "@/lib/referral";
@@ -18,7 +19,7 @@ import { REFERRAL_COOKIE, resolveReferral } from "@/lib/referral";
 export const dynamic = "force-dynamic";
 
 const BodySchema = z.object({
-  tokenAmount: z.string().regex(/^\d+(\.\d+)?$/),
+  tokenAmount: zPositiveAmount,
   currency: z.string().min(3).max(4),
   walletAddress: z.string().min(1),
   bankCode: z.string().min(1),
@@ -55,7 +56,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = BodySchema.parse(await req.json());
+    const parsedBody = BodySchema.safeParse(await req.json());
+    if (!parsedBody.success) {
+      return jsonErr({ ...bodyIssue(parsedBody.error), status: 400 }, 400);
+    }
+    const body = parsedBody.data;
     const addr = validateWalletAddress(
       body.walletAddress,
       shop.token.chainId,
