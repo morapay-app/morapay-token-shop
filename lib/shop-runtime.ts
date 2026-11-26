@@ -120,14 +120,24 @@ export async function offeredShopTokens(): Promise<OfferedToken[]> {
   });
 }
 
+/**
+ * Why a request names a token. "quote" may price a coming-soon token (price only); "order" never
+ * opens one. Buy orders and sells pass "order".
+ */
+export type TokenRequestPurpose = "quote" | "order";
+
 /** The token a buy/sell/quote request names, from config only (never a client-sent contract). */
 export async function resolveRequestToken(
   ticker: string | null | undefined,
   direction: "buy" | "sell",
+  purpose: TokenRequestPurpose,
 ): Promise<{ ok: true; token: ShopToken } | { ok: false; status: number; code: string; message: string }> {
   const token = findShopToken(shopConfig, ticker);
   if (!token) return { ok: false, status: 400, code: "token.unknown", message: "Token not available." };
-  if (token.comingSoon) return { ok: false, status: 400, code: "token.coming_soon", message: `${token.ticker} is coming soon.` };
+  if (token.comingSoon) {
+    if (purpose === "quote") return { ok: true, token };
+    return { ok: false, status: 400, code: "token.coming_soon", message: `${token.ticker} is coming soon.` };
+  }
   if (token.primary) return { ok: true, token };
   const offered = (await offeredShopTokens()).find((t) => t.ticker === token.ticker);
   const available = direction === "buy" ? offered?.buyAvailable : offered?.sellAvailable;

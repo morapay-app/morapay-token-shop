@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     const body = parsedBody.data;
     inputCurrency = body.inputCurrency;
 
-    const resolved = await resolveRequestToken(body.token, body.action === "OFFRAMP" ? "sell" : "buy");
+    const resolved = await resolveRequestToken(body.token, body.action === "OFFRAMP" ? "sell" : "buy", "quote");
     if (!resolved.ok) {
       return jsonErr({ code: resolved.code, message: resolved.message, status: resolved.status }, resolved.status);
     }

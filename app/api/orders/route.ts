@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     const body = parsedBody.data;
 
     // Chain, contract and caps come from this shop's config for the chosen ticker only.
-    const resolved = await resolveRequestToken(body.token, "buy");
+    const resolved = await resolveRequestToken(body.token, "buy", "order");
     if (!resolved.ok) {
       return jsonErr({ code: resolved.code, message: resolved.message, status: resolved.status }, resolved.status);
     }
