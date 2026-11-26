@@ -18,6 +18,23 @@ import { quoteClientMessage } from "@/lib/quote-client-message";
 import { useQuoteRateLock } from "./useQuoteRateLock";
 import { CancelOrder } from "@/components/CancelOrder";
 import { saveOrderCancel } from "@/lib/order-cancel-copy";
+import { TokenPicker } from "@/components/TokenPicker";
+import { narrowCaps } from "@/lib/quote-amount-bounds";
+
+type ApiToken = {
+  ticker: string;
+  name: string;
+  label: string;
+  hint?: string;
+  chainId: number;
+  chainName: string;
+  contract: string;
+  decimals: number;
+  logo: string;
+  buy: boolean;
+  sell: boolean;
+  buyCaps?: Record<string, { minFiat: number; maxFiat: number }>;
+};
 
 type ShopApiConfig = {
   token: {
@@ -27,6 +44,8 @@ type ShopApiConfig = {
     contract: string;
     decimals: number;
   };
+  /** Primary first; extra tokens only while core offers them. */
+  tokens?: ApiToken[];
   countries: Array<{
     code: string;
     currency: string;
@@ -79,6 +98,7 @@ export function BuyWidget() {
   const quoteReq = useRef(0);
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollStarted = useRef<number | null>(null);
+  const [ticker, setTicker] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -115,6 +135,22 @@ export function BuyWidget() {
   }, []);
 
   const activeCountry = config?.countries.find((c) => c.code === state.country);
+  const buyTokens = (config?.tokens ?? []).filter((t) => t.buy);
+  const token = buyTokens.find((t) => t.ticker === ticker) ?? buyTokens[0] ?? config?.token;
+  const tokenTicker = token?.ticker ?? "";
+  const buyLimits = narrowCaps(
+    activeCountry?.buyLimits,
+    token && "buyCaps" in token ? token.buyCaps?.[state.currency.toUpperCase()] : undefined,
+  );
+
+  /** Another token can sit on another kind of chain: its address, tag and quote never carry over. */
+  function changeToken(next: string) {
+    if (next === tokenTicker) return;
+    setTicker(next);
+    dispatch({ type: "SET_WALLET", wallet: "" });
+    dispatch({ type: "SET_DESTINATION_TAG", payoutDestinationTag: "" });
+    dispatch({ type: "SET_QUOTE", quote: null });
+  }
 
   const fetchQuote = useCallback(
     async (amount: string, currency: string) => {
@@ -136,12 +172,13 @@ export function BuyWidget() {
             action: "ONRAMP",
             inputAmount: amount,
             inputCurrency: currency,
+            token: tokenTicker || undefined,
           }),
         });
         const j = await res.json();
         if (reqId !== quoteReq.current) return;
         if (!j.success) {
-          const limits = activeCountry?.buyLimits;
+          const limits = buyLimits;
           setQuoteError(
             quoteClientMessage(j.code, j.message, {
               minFiat: limits?.minFiat,
@@ -173,7 +210,7 @@ export function BuyWidget() {
         if (reqId === quoteReq.current) setQuoteLoading(false);
       }
     },
-    [activeCountry?.buyLimits],
+    [buyLimits, tokenTicker],
   );
 
   useEffect(() => {
@@ -276,6 +313,7 @@ export function BuyWidget() {
           phoneNumber: state.phone || undefined,
           networkProvider: state.networkProvider || undefined,
           customerName: state.customerName || undefined,
+          token: tokenTicker || undefined,
           // Deliberately send a fake token address — server must ignore it
           target_token_address: "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
         }),
@@ -360,7 +398,7 @@ export function BuyWidget() {
     );
   }
 
-  if (!config) {
+  if (!config || !token) {
     return (
       <div className="card p-6 animate-pulse">
         <div className="h-8 bg-[var(--mp-subcard)] rounded-xl mb-4" />
@@ -383,9 +421,9 @@ export function BuyWidget() {
         deskUrl={config.telegram.deskUrl}
         amount={state.amount || "50"}
         currency={state.currency}
-        ticker={config.token.ticker}
-        chainId={config.token.chainId}
-        contract={config.token.contract}
+        ticker={token.ticker}
+        chainId={token.chainId}
+        contract={token.contract}
         wallet={state.wallet}
         method={state.methodId || activeCountry?.methods[0]?.kind || "mobile_money"}
         countries={config.countries}
@@ -408,6 +446,12 @@ export function BuyWidget() {
         </p>
       )}
 
+      {state.step === "amount" && buyTokens.length > 1 && (
+        <div className="mb-4">
+          <TokenPicker id="buy-token" tokens={buyTokens} value={tokenTicker} onChange={changeToken} />
+        </div>
+      )}
+
       {state.step === "amount" && activeCountry && (
         <AmountStep
           currency={state.currency}
@@ -416,11 +460,11 @@ export function BuyWidget() {
           quoteLoading={quoteLoading}
           quoteError={quoteError}
           quickAmounts={activeCountry.quickAmounts ?? []}
-          limits={activeCountry.buyLimits}
+          limits={buyLimits}
           showFee={config.fees.showFeeLine}
           countries={config.countries}
           country={state.country}
-          ticker={config.token.ticker}
+          ticker={token.ticker}
           onAmount={(v) => dispatch({ type: "SET_AMOUNT", amount: v })}
           onCountry={(code, currency) => {
             setGeoNote(null);
@@ -461,8 +505,8 @@ export function BuyWidget() {
 
       {state.step === "wallet" && (
         <WalletStep
-          chainId={config.token.chainId}
-          contract={config.token.contract}
+          chainId={token.chainId}
+          contract={token.contract}
           wallet={state.wallet}
           payoutDestinationTag={state.payoutDestinationTag}
           onWallet={(w) => dispatch({ type: "SET_WALLET", wallet: w })}
@@ -488,7 +532,7 @@ export function BuyWidget() {
           phone={state.phone}
           wallet={state.wallet}
           payoutDestinationTag={state.payoutDestinationTag}
-          chainId={config.token.chainId}
+          chainId={token.chainId}
           accepted={state.acceptedRisk}
           submitting={state.step === "submitting"}
           showFee={config.fees.showFeeLine}
@@ -500,6 +544,7 @@ export function BuyWidget() {
 
       {state.step === "awaiting_prompt" && waitStartedAt != null && (
         <AwaitingStep
+          ticker={token.ticker}
           phone={state.phone}
           network={state.networkProvider}
           orderRef={state.ref}
@@ -517,7 +562,7 @@ export function BuyWidget() {
       )}
 
       {state.step === "bank_deposit" && (
-        <BankDepositStep deposit={state.bankDeposit} orderRef={state.ref} />
+        <BankDepositStep deposit={state.bankDeposit} orderRef={state.ref} ticker={token.ticker} />
       )}
 
       {(state.step === "awaiting_prompt" || state.step === "bank_deposit" || state.step === "still_processing") && (
@@ -543,7 +588,7 @@ export function BuyWidget() {
               : state.error
           }
           retryAfterSec={state.retryAfterSec}
-          ticker={config.token.ticker}
+          ticker={token.ticker}
           deskUrl={config.telegram.deskUrl}
           waitStartedAt={waitStartedAt}
           onWaitTimeout={markWaitTimedOut}

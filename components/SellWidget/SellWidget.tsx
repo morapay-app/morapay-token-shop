@@ -21,8 +21,12 @@ import {
   type SellInstitution,
 } from "@/lib/sell";
 import { saveOrderCancel } from "@/lib/order-cancel-copy";
+import { shopTokens } from "@/lib/shop-tokens";
+import { TokenPicker } from "@/components/TokenPicker";
 
 const CURRENCIES = shopCurrencies(shopConfig);
+/** Tokens this shop sells, primary first (core availability is checked on load). */
+const SELL_TOKENS = shopTokens(shopConfig).filter((t) => t.sellEnabled);
 const DEFAULT_CURRENCY =
   shopConfig.countries.list.find((c) => c.code === shopConfig.countries.default)?.currency.toUpperCase() ??
   CURRENCIES[0];
@@ -32,6 +36,9 @@ const DEFAULT_CURRENCY =
  * Deposit address must never equal the token contract.
  */
 export function SellWidget() {
+  const [ticker, setTicker] = useState(SELL_TOKENS[0]?.ticker ?? shopConfig.token.ticker);
+  /** Extra tokens core is not offering for sale right now; null until the config loads. */
+  const [offered, setOffered] = useState<string[] | null>(null);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [wallet, setWallet] = useState("");
@@ -52,7 +59,9 @@ export function SellWidget() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const chain = getChain(shopConfig.token.chainId);
+  const pickerTokens = SELL_TOKENS.filter((t) => t.primary || offered?.includes(t.ticker));
+  const token = pickerTokens.find((t) => t.ticker === ticker) ?? pickerTokens[0] ?? SELL_TOKENS[0]!;
+  const chain = getChain(token.chainId);
   const spec = chainKindSpec(chain);
   const tagRequired = spec.depositReference === "destination_tag";
   const memoRequired = spec.depositReference === "memo";
@@ -60,7 +69,7 @@ export function SellWidget() {
   const { check, retry } = useAccountName(currency, bankCode, account);
   const accountVerified = check.state === "off" || check.state === "ok";
 
-  const amountError = amount ? sellAmountError(amount, shopConfig) : null;
+  const amountError = amount ? sellAmountError(amount, shopConfig, token) : null;
   const institution = institutions.find((i) => i.code === bankCode);
 
   useEffect(() => {
@@ -68,7 +77,10 @@ export function SellWidget() {
     void fetch("/api/config")
       .then((r) => r.json())
       .then((j) => {
-        if (active) setAvailable(j.success === true && j.data.fallback !== true);
+        if (!active) return;
+        setAvailable(j.success === true && j.data.fallback !== true);
+        const tokens = (j.success ? j.data.tokens ?? [] : []) as Array<{ ticker: string; sell?: boolean }>;
+        setOffered(tokens.filter((t) => t.sell).map((t) => t.ticker));
       })
       .catch(() => {
         if (active) setAvailable(false);
@@ -105,11 +117,11 @@ export function SellWidget() {
     const timer = setTimeout(() => {
       setPayout(null);
       setQuoteError(null);
-      if (!available || !amount || sellAmountError(amount, shopConfig)) return;
+      if (!available || !amount || sellAmountError(amount, shopConfig, token)) return;
       void fetch("/api/quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "OFFRAMP", inputAmount: amount, inputCurrency: currency }),
+        body: JSON.stringify({ action: "OFFRAMP", inputAmount: amount, inputCurrency: currency, token: token.ticker }),
       })
         .then((r) => r.json())
         .then((j) => {
@@ -122,7 +134,19 @@ export function SellWidget() {
         });
     }, 400);
     return () => clearTimeout(timer);
-  }, [amount, currency, available]);
+    // token: ticker and its range are what the quote depends on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amount, currency, available, token.ticker]);
+
+  /** Another token can sit on another kind of chain: its sending wallet and quote never carry over. */
+  function changeToken(next: string) {
+    if (next === token.ticker) return;
+    setTicker(next);
+    setWallet("");
+    setPayout(null);
+    setQuoteError(null);
+    setError(null);
+  }
 
   /** A bank or number from one currency must never carry over to another. */
   function changeCurrency(next: string) {
@@ -138,8 +162,8 @@ export function SellWidget() {
     if (!accountVerified) return;
     const v = validateWalletAddress(
       wallet,
-      shopConfig.token.chainId,
-      shopConfig.token.contract,
+      token.chainId,
+      token.contract,
     );
     if (!v.ok) {
       setError(v.reason);
@@ -156,6 +180,7 @@ export function SellWidget() {
           walletAddress: v.normalized,
           bankCode,
           accountNumber: account,
+          token: token.ticker,
         }),
       });
       const j = await res.json();
@@ -165,7 +190,7 @@ export function SellWidget() {
       }
       if (
         j.data.depositAddress?.toLowerCase() ===
-        shopConfig.token.contract.toLowerCase()
+        token.contract.toLowerCase()
       ) {
         setError("Unsafe deposit address. Do not send tokens.");
         return;
@@ -176,13 +201,13 @@ export function SellWidget() {
           String(j.data.depositDestinationTag).trim() === "")
       ) {
         setError(
-          `Missing deposit destination tag. Do not send ${shopConfig.token.ticker} — contact support with your order reference.`,
+          `Missing deposit destination tag. Do not send ${token.ticker} — contact support with your order reference.`,
         );
         return;
       }
       if (memoRequired && !j.data.depositMemo) {
         setError(
-          `Missing deposit memo. Do not send ${shopConfig.token.ticker}. Contact support.`,
+          `Missing deposit memo. Do not send ${token.ticker}. Contact support.`,
         );
         return;
       }
@@ -203,10 +228,10 @@ export function SellWidget() {
 
   if (deposit && memoRequired && deposit.depositMemo) {
     return (
-      <SellTracker orderRef={deposit.ref} ticker={shopConfig.token.ticker}>
+      <SellTracker orderRef={deposit.ref} ticker={token.ticker}>
         <MemoDepositInstructions
-          ticker={shopConfig.token.ticker}
-          networkName={chain?.name ?? shopConfig.token.name}
+          ticker={token.ticker}
+          networkName={chain?.name ?? token.name}
           depositAddress={deposit.depositAddress}
           depositMemo={deposit.depositMemo}
           depositAmount={deposit.depositAmount ?? amount}
@@ -221,16 +246,16 @@ export function SellWidget() {
       return (
         <div className="card p-5 space-y-4" role="alert">
           <p className="text-sm text-[var(--mp-warning-text)]">
-            Missing deposit destination tag. Do not send {shopConfig.token.ticker} —
+            Missing deposit destination tag. Do not send {token.ticker} —
             contact support with ref {deposit.ref}.
           </p>
         </div>
       );
     }
     return (
-      <SellTracker orderRef={deposit.ref} ticker={shopConfig.token.ticker}>
+      <SellTracker orderRef={deposit.ref} ticker={token.ticker}>
         <AddressDepositInstructions
-          ticker={shopConfig.token.ticker}
+          ticker={token.ticker}
           amount={amount}
           depositAddress={deposit.depositAddress}
           destinationTag={deposit.depositDestinationTag}
@@ -252,9 +277,10 @@ export function SellWidget() {
 
   return (
     <div className="card p-5 space-y-4">
+      <TokenPicker id="sell-token" tokens={pickerTokens} value={token.ticker} onChange={changeToken} disabled={loading} />
       <div>
         <label htmlFor="sell-amount" className="label">
-          {shopConfig.token.ticker} to sell
+          {token.ticker} to sell
         </label>
         <input
           id="sell-amount"
@@ -269,8 +295,8 @@ export function SellWidget() {
             quoteError ??
             (payout
               ? `You receive about ${payout.amount} ${payout.currency}`
-              : shopConfig.sell.minToken != null
-                ? `Minimum ${shopConfig.sell.minToken} ${shopConfig.token.ticker}`
+              : token.sellMinToken != null
+                ? `Minimum ${token.sellMinToken} ${token.ticker}`
                 : null)}
         </p>
       </div>

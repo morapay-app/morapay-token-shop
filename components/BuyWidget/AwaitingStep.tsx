@@ -3,6 +3,8 @@ import { shopConfig } from "@/shop.config";
 import { WaitCountdown } from "./WaitCountdown";
 
 type Props = {
+  /** Token being bought (multi-token shops); defaults to the shop token. */
+  ticker?: string;
   phone: string;
   network: string;
   orderRef: string | null;
@@ -43,7 +45,7 @@ export function AwaitingStep(props: Props) {
           ))}
         </ul>
       </div>
-      <OrderProgress steps={buySteps("awaiting", shopConfig.token.ticker)} />
+      <OrderProgress steps={buySteps("awaiting", (props.ticker ?? shopConfig.token.ticker))} />
       <TrackOrderLink orderRef={props.orderRef} />
     </div>
   );

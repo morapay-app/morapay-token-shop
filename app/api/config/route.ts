@@ -1,4 +1,4 @@
-import { getShopConfig, getCachedRampConfig, getHealth } from "@/lib/shop-runtime";
+import { getShopConfig, getCachedRampConfig, getHealth, offeredShopTokens } from "@/lib/shop-runtime";
 import { mergeCountries } from "@/lib/merge-methods";
 import { jsonOk, jsonErr } from "@/lib/api-response";
 import { detectCountry } from "@/lib/geo";
@@ -18,6 +18,25 @@ export async function GET(req: Request) {
     });
 
     const countries = mergeCountries(shop, live, "buy");
+    // Primary first. An extra token is listed only in the directions core offers it right now.
+    const tokens = (await offeredShopTokens())
+      .filter((t) => t.primary || t.buyAvailable || t.sellAvailable)
+      .map((t) => ({
+        ticker: t.ticker,
+        name: t.name,
+        label: t.label,
+        hint: t.hint,
+        chainId: t.chainId,
+        chainName: t.chainName,
+        contract: t.contract,
+        decimals: t.decimals,
+        logo: t.logo,
+        buy: t.buyAvailable,
+        sell: t.sellAvailable,
+        buyCaps: t.buyCaps,
+        sellMinToken: t.sellMinToken,
+        sellMaxToken: t.sellMaxToken,
+      }));
 
     return jsonOk({
       shopId: shop.shopId,
@@ -29,6 +48,7 @@ export async function GET(req: Request) {
         decimals: shop.token.decimals,
         logo: shop.token.logo,
       },
+      tokens,
       sellEnabled: shop.sell.enabled,
       brand: {
         accent: shop.brand.accent,

@@ -4,6 +4,7 @@ import { interpretStatus } from "@/lib/morapay/status";
 import { jsonOk, jsonErr } from "@/lib/api-response";
 import { clientIp, rateLimit, RL } from "@/lib/ratelimit";
 import { getShopConfig } from "@/lib/shop-runtime";
+import { shopTokenForOrder } from "@/lib/shop-tokens";
 import { isCancellableOrder } from "@/lib/order-cancel";
 
 export const dynamic = "force-dynamic";
@@ -30,18 +31,21 @@ export async function GET(
     const tx = await getTransaction(ref, "", { buyerIp: ip });
     const interpreted = interpretStatus(tx as Parameters<typeof interpretStatus>[0]);
     // Never return `tx`: it carries the customer's name, email and phone.
-    const receipt = buildReceipt(
-      ref,
-      tx as Record<string, unknown>,
-      interpreted.phase,
-      interpreted.txHash,
-      getShopConfig().token.chainId,
-    );
+    const raw = tx as Record<string, unknown>;
+    const delivery = (raw.delivery ?? {}) as Record<string, unknown>;
+    const deposit = (raw.deposit ?? {}) as Record<string, unknown>;
+    const orderToken = shopTokenForOrder(getShopConfig(), {
+      chainId: delivery.chainId ?? raw.targetChainId,
+      tokenAddress: delivery.tokenAddress ?? raw.targetTokenAddress,
+      tokenSymbol: delivery.tokenSymbol ?? deposit.token ?? raw.targetTokenSymbol,
+    });
+    const receipt = buildReceipt(ref, raw, interpreted.phase, interpreted.txHash, orderToken.chainId);
     return jsonOk({
       ref,
       phase: interpreted.phase,
       message: interpreted.message,
       receipt,
+      token: orderToken.ticker,
       // Unpaid and nothing delivered: the cancel button may show (Core still decides).
       cancellable: interpreted.phase === "in_progress" && isCancellableOrder(tx as Parameters<typeof isCancellableOrder>[0]),
     });

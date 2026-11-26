@@ -2,8 +2,10 @@ import { shopConfig } from "@/shop.config";
 import {
   getRampConfig,
   isTokenSupported,
+  tokenDirections,
   type RampConfig,
 } from "@/lib/morapay/ramp";
+import { findShopToken, shopTokens, type ShopToken } from "@/lib/shop-tokens";
 import { getMerchantConfigStatus, merchantSigningEnabled } from "@/lib/morapay/merchant-config";
 
 export type HealthSnapshot = {
@@ -97,4 +99,40 @@ export async function getHealth(): Promise<HealthSnapshot> {
 
 export function getShopConfig() {
   return shopConfig;
+}
+
+export type OfferedToken = ShopToken & { buyAvailable: boolean; sellAvailable: boolean };
+
+/**
+ * Tokens the shop shows right now. The primary token follows the shop health check (fallback
+ * desk when core drops it); an extra token shows only in the directions core currently lists.
+ */
+export async function offeredShopTokens(): Promise<OfferedToken[]> {
+  const tokens = shopTokens(shopConfig);
+  const live = tokens.length > 1 ? await getCachedRampConfig() : null;
+  return tokens.map((token) => {
+    if (token.primary) return { ...token, buyAvailable: token.buyEnabled, sellAvailable: token.sellEnabled };
+    const directions = live ? tokenDirections(live, token.chainId, token.contract) : { buy: false, sell: false };
+    return {
+      ...token,
+      buyAvailable: token.buyEnabled && directions.buy,
+      sellAvailable: token.sellEnabled && directions.sell,
+    };
+  });
+}
+
+/** The token a buy/sell/quote request names, from config only (never a client-sent contract). */
+export async function resolveRequestToken(
+  ticker: string | null | undefined,
+  direction: "buy" | "sell",
+): Promise<{ ok: true; token: ShopToken } | { ok: false; status: number; message: string }> {
+  const token = findShopToken(shopConfig, ticker);
+  if (!token) return { ok: false, status: 400, message: "Token not available." };
+  if (token.primary) return { ok: true, token };
+  const offered = (await offeredShopTokens()).find((t) => t.ticker === token.ticker);
+  const available = direction === "buy" ? offered?.buyAvailable : offered?.sellAvailable;
+  if (!available) {
+    return { ok: false, status: 503, message: `${token.ticker} ${direction === "buy" ? "buys" : "sells"} are paused.` };
+  }
+  return { ok: true, token };
 }

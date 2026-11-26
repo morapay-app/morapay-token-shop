@@ -6,6 +6,8 @@ import { OrderProgress, TrackOrderLink } from "@/components/OrderProgress";
 import { shopConfig } from "@/shop.config";
 
 type Props = {
+  /** Token being bought (multi-token shops); defaults to the shop token. */
+  ticker?: string;
   deposit: BankDeposit | null;
   orderRef: string | null;
 };
@@ -58,7 +60,7 @@ function CopyRow({ label, value, copyValue }: { label: string; value: string; co
   );
 }
 
-export function BankDepositStep({ deposit, orderRef }: Props) {
+export function BankDepositStep({ deposit, orderRef, ticker }: Props) {
   const timeLeft = useTimeLeft(deposit?.expiresAt ?? null);
 
   if (!deposit) {
@@ -98,7 +100,7 @@ export function BankDepositStep({ deposit, orderRef }: Props) {
       <OrderProgress
         steps={[
           { label: "Waiting for your transfer", state: "active" },
-          { label: `Getting your ${shopConfig.token.ticker}`, state: "todo" },
+          { label: `Getting your ${(ticker ?? shopConfig.token.ticker)}`, state: "todo" },
           { label: "Delivered to your wallet", state: "todo" },
         ]}
       />

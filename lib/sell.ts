@@ -1,13 +1,19 @@
 import type { ShopConfig } from "@/config/schema";
+import type { ShopToken } from "@/lib/shop-tokens";
 
 export type SellInstitution = { code: string; name: string; kind: string };
 
 /** Shop-level floor and ceiling. Core still enforces the live value limits on the quote. */
-export function sellAmountError(amount: string, shop: ShopConfig): string | null {
+export function sellAmountError(
+  amount: string,
+  shop: ShopConfig,
+  token?: Pick<ShopToken, "ticker" | "sellMinToken" | "sellMaxToken">,
+): string | null {
   const value = Number(amount);
   if (!/^\d+(\.\d+)?$/.test(amount) || !(value > 0)) return "Enter an amount.";
-  const { minToken, maxToken } = shop.sell;
-  const ticker = shop.token.ticker;
+  const minToken = token ? token.sellMinToken : shop.sell.minToken;
+  const maxToken = token ? token.sellMaxToken : shop.sell.maxToken;
+  const ticker = token?.ticker ?? shop.token.ticker;
   if (minToken != null && value < minToken) return `Minimum sell amount is ${minToken} ${ticker}`;
   if (maxToken != null && value > maxToken) return `Maximum sell amount is ${maxToken} ${ticker}`;
   return null;

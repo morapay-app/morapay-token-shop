@@ -9,7 +9,8 @@ import {
   listTransactions,
 } from "@/lib/morapay/ramp";
 import { MorapayApiError } from "@/lib/morapay/client";
-import { getShopConfig, getHealth } from "@/lib/shop-runtime";
+import { getShopConfig, getHealth, resolveRequestToken } from "@/lib/shop-runtime";
+import { narrowCaps } from "@/lib/quote-amount-bounds";
 import { jsonOk, jsonErr } from "@/lib/api-response";
 import { bodyIssue, zPositiveAmount } from "@/lib/validate/amount";
 import { clientIp, rateLimit, RL } from "@/lib/ratelimit";
@@ -40,6 +41,8 @@ const BodySchema = z.object({
   target_chain_id: z.union([z.string(), z.number()]).optional(),
   turnstileToken: z.string().optional(),
   payoutDestinationTag: z.string().optional(),
+  /** Ticker of one of this shop's tokens; omitted = the primary token. */
+  token: z.string().max(16).optional(),
 });
 
 function isOpenStatus(status: unknown): boolean {
@@ -70,10 +73,17 @@ export async function POST(req: Request) {
     }
     const body = parsedBody.data;
 
+    // Chain, contract and caps come from this shop's config for the chosen ticker only.
+    const resolved = await resolveRequestToken(body.token, "buy");
+    if (!resolved.ok) {
+      return jsonErr({ message: resolved.message, status: resolved.status }, resolved.status);
+    }
+    const token = resolved.token;
+
     const addr = validateWalletAddress(
       body.walletAddress,
-      shop.token.chainId,
-      shop.token.contract,
+      token.chainId,
+      token.contract,
     );
     if (!addr.ok) {
       return jsonErr({ message: addr.reason, status: 400 }, 400);
@@ -88,7 +98,7 @@ export async function POST(req: Request) {
     }
 
     const walletRl = await rateLimit(
-      `order:${ip}:${walletStorageKey(addr.normalized, shop.token.chainId)}`,
+      `order:${ip}:${walletStorageKey(addr.normalized, token.chainId)}`,
       RL.order.limit,
       RL.order.windowMs,
     );
@@ -119,23 +129,24 @@ export async function POST(req: Request) {
         action: "ONRAMP",
         inputAmount: body.fiatAmount,
         inputCurrency: body.currency,
-        outputCurrency: shop.token.ticker,
-        chain: String(shop.token.chainId),
-        tokenAddress: shop.token.contract,
+        outputCurrency: token.ticker,
+        chain: String(token.chainId),
+        tokenAddress: token.contract,
       },
       morapayCtx,
     );
     const coreTargetTokenAddress = merchantCoreTokenAddress(
-      shop.token.chainId,
-      shop.token.contract,
+      token.chainId,
+      token.contract,
     );
 
     const amountNum = Number(body.fiatAmount);
-    if (country.caps) {
-      if (amountNum < country.caps.minFiat || amountNum > country.caps.maxFiat) {
+    const caps = narrowCaps(country.caps, token.buyCaps[body.currency.toUpperCase()]);
+    if (caps) {
+      if (amountNum < caps.minFiat || amountNum > caps.maxFiat) {
         return jsonErr(
           {
-            message: `Amount must be between ${country.caps.minFiat} and ${country.caps.maxFiat} ${body.currency.toUpperCase()}.`,
+            message: `Amount must be between ${caps.minFiat} and ${caps.maxFiat} ${body.currency.toUpperCase()}.`,
             status: 400,
           },
           400,
@@ -175,7 +186,7 @@ export async function POST(req: Request) {
         addr.normalized,
         10,
         morapayCtx,
-        shop.token.chainId,
+        token.chainId,
       );
       const items = Array.isArray(existing)
         ? existing
@@ -185,6 +196,10 @@ export async function POST(req: Request) {
         const created = item.createdAt ? Date.parse(String(item.createdAt)) : 0;
         const fiat = String(item.fromAmount ?? item.fiatAmount ?? "");
         const cur = String(item.fiatCurrency ?? item.currency ?? "").toLowerCase();
+        // Same amount for another token is a different order.
+        const delivery = (item.delivery ?? {}) as Record<string, unknown>;
+        const itemToken = String(delivery.tokenSymbol ?? item.targetTokenSymbol ?? "").toUpperCase();
+        if (itemToken && itemToken !== token.ticker.toUpperCase()) continue;
         if (
           isOpenStatus(item.status) &&
           created >= fiveMinAgo &&
@@ -212,8 +227,8 @@ export async function POST(req: Request) {
       wallet_address: addr.normalized,
       customer_name: body.customerName,
       client_channel: "browser" as const,
-      target_chain_id: String(shop.token.chainId),
-      target_token_symbol: shop.token.ticker,
+      target_chain_id: String(token.chainId),
+      target_token_symbol: token.ticker,
       ...(coreTargetTokenAddress
         ? { target_token_address: coreTargetTokenAddress }
         : {}),

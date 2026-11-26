@@ -17,6 +17,9 @@ export const OnrampTargetSchema = z.object({
   symbol: z.string(),
   tokenAddress: z.string(),
   decimals: z.number(),
+  /** Admin-listed tokens carry per-direction switches; absent = both directions. */
+  buyEnabled: z.boolean().optional(),
+  sellEnabled: z.boolean().optional(),
 });
 
 export const FiatCorridorSchema = z.object({
@@ -591,6 +594,20 @@ export function isTokenSupported(
       (native?.listedSymbol != null && t.symbol.toUpperCase() === native.listedSymbol)
     );
   });
+}
+
+/** Which directions core offers this token in right now (not listed = neither). */
+export function tokenDirections(
+  config: RampConfig,
+  chainId: number,
+  tokenAddress: string,
+): { buy: boolean; sell: boolean } {
+  if (!isTokenSupported(config, chainId, tokenAddress)) return { buy: false, sell: false };
+  const needle = tokenAddress.toLowerCase();
+  const listed = config.supportedOnrampTargets.find(
+    (t) => t.chainId === chainId && t.tokenAddress.toLowerCase() === needle,
+  );
+  return { buy: listed?.buyEnabled !== false, sell: listed?.sellEnabled !== false };
 }
 
 /** Deposit instructions from a transaction read, gaps filled from the initiate response. */
