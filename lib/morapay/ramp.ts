@@ -325,6 +325,8 @@ export type InitiateOnrampBody = {
   payment_method?: "mobile_money" | "bank_transfer" | "bank" | "card";
   /** XRPL destination tag for exchange / tagged receive addresses */
   payout_destination_tag?: number;
+  /** The customer confirmed the destination is their smart-contract wallet (core still refuses plain contracts). */
+  allow_contract_recipient?: boolean;
 };
 
 export function buildInitiateOnrampPayload(
@@ -362,6 +364,7 @@ export function buildInitiateOnrampPayload(
     quotedToAmount: body.quoted_to_amount,
     referralCode: body.referral_code,
     turnstileToken: body.turnstileToken,
+    ...(body.allow_contract_recipient === true ? { allowContractRecipient: true } : {}),
     shopId: process.env.SHOP_ID,
   };
 

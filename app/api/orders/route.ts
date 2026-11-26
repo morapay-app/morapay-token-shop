@@ -43,6 +43,8 @@ const BodySchema = z.object({
   payoutDestinationTag: z.string().optional(),
   /** Ticker of one of this shop's tokens; omitted = the primary token. */
   token: z.string().max(16).optional(),
+  /** Set after the customer confirms a smart-contract wallet (core answered recipient.is.smart.wallet). */
+  confirmSmartWallet: z.boolean().optional(),
 });
 
 function isOpenStatus(status: unknown): boolean {
@@ -225,6 +227,7 @@ export async function POST(req: Request) {
       fiat_amount: body.fiatAmount,
       payout_wallet_address: addr.normalized,
       wallet_address: addr.normalized,
+      ...(body.confirmSmartWallet === true ? { allow_contract_recipient: true } : {}),
       customer_name: body.customerName,
       client_channel: "browser" as const,
       target_chain_id: String(token.chainId),

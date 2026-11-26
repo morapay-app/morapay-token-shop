@@ -258,6 +258,42 @@ describe("routes", { timeout: 30_000 }, () => {
   });
 });
 
+describe("smart-wallet confirmation", { timeout: 30_000 }, () => {
+  const order = {
+    fiatAmount: "500",
+    currency: "GHS",
+    country: "GH",
+    methodId: "momo_mtn",
+    methodKind: "mobile_money",
+    phoneNumber: "0244123456",
+    walletAddress: EVM_WALLET,
+    token: "PCM",
+  };
+
+  it("passes the customer's confirmation to core only when given", async () => {
+    await call("orders", order);
+    expect(core.initiateOnramp.mock.lastCall![0]).not.toHaveProperty("allow_contract_recipient");
+    await call("orders", { ...order, confirmSmartWallet: true });
+    expect(core.initiateOnramp.mock.lastCall![0]).toMatchObject({ allow_contract_recipient: true });
+  });
+
+  it("sends allowContractRecipient in core's payload only when confirmed", async () => {
+    const { buildInitiateOnrampPayload } = await import("@/lib/morapay/ramp");
+    const base = {
+      currency: "GHS",
+      fiat_amount: "500",
+      payout_wallet_address: EVM_WALLET,
+      wallet_address: EVM_WALLET,
+      client_channel: "browser" as const,
+      target_chain_id: "10",
+      target_token_symbol: "PCM",
+      quoted_to_amount: "1",
+    };
+    expect(buildInitiateOnrampPayload(base)).not.toHaveProperty("allowContractRecipient");
+    expect(buildInitiateOnrampPayload({ ...base, allow_contract_recipient: true })).toMatchObject({ allowContractRecipient: true });
+  });
+});
+
 describe("the Pi shop as shipped: PCM now, PI coming soon", { timeout: 30_000 }, () => {
   beforeEach(() => {
     piVariant.open = false;
