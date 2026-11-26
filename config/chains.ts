@@ -24,6 +24,14 @@ const chains: Record<number, ChainInfo> = {
     explorerTx: (h) => `https://bscscan.com/tx/${h}`,
     explorerAddress: (a) => `https://bscscan.com/address/${a}`,
   },
+  10: {
+    chainId: 10,
+    name: "Optimism",
+    shortName: "OP",
+    kind: "evm",
+    explorerTx: (h) => `https://optimistic.etherscan.io/tx/${h}`,
+    explorerAddress: (a) => `https://optimistic.etherscan.io/address/${a}`,
+  },
   137: {
     chainId: 137,
     name: "Polygon",

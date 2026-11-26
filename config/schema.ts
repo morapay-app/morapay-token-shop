@@ -61,20 +61,91 @@ export const CountrySchema = z.object({
   methods: z.array(PaymentMethodSchema),
 });
 
+export const TokenSchema = z.object({
+  name: z.string().min(1),
+  ticker: z.string().min(1),
+  chainId: z.number().int(),
+  contract: z.string().min(1),
+  decimals: z.number().int(),
+  logo: z.string(),
+  description: z.string().max(280),
+  explorerTokenUrl: z.string().url().optional(),
+  /** Shown in the picker as "soon", never selectable; buys and sells are refused. */
+  comingSoon: z.boolean().optional(),
+});
+
+const FiatCapsSchema = z.object({ minFiat: z.number().positive(), maxFiat: z.number().positive() });
+
+export const ExtraTokenSchema = TokenSchema.extend({
+  /** Short picker label (e.g. "PCM · Optimism"). Defaults to the ticker. */
+  label: z.string().min(1).max(24).optional(),
+  /** Tooltip under the picker: chain, wallet type. */
+  hint: z.string().max(160).optional(),
+  buy: z
+    .object({
+      enabled: z.boolean().default(true),
+      /** Per-currency fiat range (e.g. { GHS: { minFiat, maxFiat } }); narrows the country caps. */
+      caps: z.record(z.string().length(3), FiatCapsSchema).default({}),
+    })
+    .default({ enabled: true, caps: {} }),
+  sell: z
+    .object({
+      enabled: z.boolean().default(true),
+      minToken: z.number().positive().optional(),
+      maxToken: z.number().positive().optional(),
+    })
+    .default({ enabled: true }),
+});
+
+/** Contract shape must match the chain kind (0x… on EVM, the native id on XRPL / Pi). */
+function checkTokenContract(
+  token: z.infer<typeof TokenSchema>,
+  path: (string | number)[],
+  ctx: z.RefinementCtx,
+  requireKnownChain = false,
+): void {
+  const chain = getChain(token.chainId);
+  if (!chain) {
+    if (requireKnownChain) ctx.addIssue({ code: "custom", message: `Unknown chain ${token.chainId}`, path: [...path, "chainId"] });
+    return;
+  }
+  const contract = token.contract;
+  if (chain.kind === "evm" && !/^0x[a-fA-F0-9]{40}$/.test(contract)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "EVM token.contract must be a 0x-prefixed 20-byte hex address",
+      path: [...path, "contract"],
+    });
+  }
+  const native = chainKindSpec(chain).native;
+  if (native) {
+    if (contract.toLowerCase() !== native.contract) {
+      ctx.addIssue({
+        code: "custom",
+        message: `${native.label} native asset token.contract must be "${native.contract}"`,
+        path: [...path, "contract"],
+      });
+    }
+    if (native.decimals != null && token.decimals !== native.decimals) {
+      ctx.addIssue({
+        code: "custom",
+        message: `${native.label} uses ${native.decimals} decimals`,
+        path: [...path, "decimals"],
+      });
+    }
+  }
+}
+
 export const ShopConfigSchema = z
   .object({
     shopId: z.string().regex(/^[a-z0-9-]{2,40}$/),
     siteUrl: z.string().url(),
-    token: z.object({
-      name: z.string().min(1),
-      ticker: z.string().min(1),
-      chainId: z.number().int(),
-      contract: z.string().min(1),
-      decimals: z.number().int(),
-      logo: z.string(),
-      description: z.string().max(280),
-      explorerTokenUrl: z.string().url().optional(),
-    }),
+    token: TokenSchema,
+    /**
+     * More tokens this shop offers beside `token` (picker in buy and sell; `token` stays the
+     * default). Omit for a single-token shop. Server routes only ever use these entries.
+     */
+    extraTokens: z.array(ExtraTokenSchema).max(4).default([]),
     brand: z.object({
       accent: hexColor,
       accentText: z.string().optional(),
@@ -186,38 +257,31 @@ export const ShopConfigSchema = z
       });
     }
 
-    const chain = getChain(cfg.token.chainId);
-    const contract = cfg.token.contract;
-    if (chain?.kind === "evm") {
-      if (!/^0x[a-fA-F0-9]{40}$/.test(contract)) {
-        ctx.addIssue({
-          code: "custom",
-          message: "EVM token.contract must be a 0x-prefixed 20-byte hex address",
-          path: ["token", "contract"],
-        });
+    checkTokenContract(cfg.token, ["token"], ctx);
+    const tickers = new Set([cfg.token.ticker.toUpperCase()]);
+    cfg.extraTokens.forEach((extra, index) => {
+      checkTokenContract(extra, ["extraTokens", index], ctx, true);
+      const ticker = extra.ticker.toUpperCase();
+      if (tickers.has(ticker)) {
+        ctx.addIssue({ code: "custom", message: `Ticker ${ticker} is listed twice`, path: ["extraTokens", index, "ticker"] });
       }
-    }
-    const native = chainKindSpec(chain).native;
-    if (native) {
-      if (contract.toLowerCase() !== native.contract) {
-        ctx.addIssue({
-          code: "custom",
-          message: `${native.label} native asset token.contract must be "${native.contract}"`,
-          path: ["token", "contract"],
-        });
+      tickers.add(ticker);
+      const { minToken, maxToken } = extra.sell;
+      if (minToken != null && maxToken != null && minToken > maxToken) {
+        ctx.addIssue({ code: "custom", message: "sell.minToken is above sell.maxToken", path: ["extraTokens", index, "sell"] });
       }
-      if (native.decimals != null && cfg.token.decimals !== native.decimals) {
-        ctx.addIssue({
-          code: "custom",
-          message: `${native.label} uses ${native.decimals} decimals`,
-          path: ["token", "decimals"],
-        });
+      for (const [currency, caps] of Object.entries(extra.buy.caps)) {
+        if (caps.minFiat > caps.maxFiat) {
+          ctx.addIssue({ code: "custom", message: `${currency} minFiat is above maxFiat`, path: ["extraTokens", index, "buy", "caps", currency] });
+        }
       }
-    }
+    });
   });
 
 export type ShopConfig = z.infer<typeof ShopConfigSchema>;
 export type ShopConfigInput = z.input<typeof ShopConfigSchema>;
+export type ShopTokenConfig = z.infer<typeof TokenSchema>;
+export type ExtraTokenConfig = z.infer<typeof ExtraTokenSchema>;
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 export type CountryConfig = z.infer<typeof CountrySchema>;
 
@@ -254,6 +318,7 @@ export function lintShopConfig(cfg: ShopConfigInput): string[] {
         ];
   const blobs: string[] = [
     cfg.token.description,
+    ...(cfg.extraTokens ?? []).flatMap((t) => [t.description, t.label ?? "", t.hint ?? ""]),
     cfg.brand.headline ?? "",
     cfg.brand.subline ?? "",
     cfg.copy?.about ?? "",

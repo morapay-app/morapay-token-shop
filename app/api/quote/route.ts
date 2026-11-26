@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { getQuote } from "@/lib/morapay/ramp";
 import { asMorapayApiError, isMorapayApiError } from "@/lib/morapay/client";
-import { getShopConfig } from "@/lib/shop-runtime";
+import { getShopConfig, resolveRequestToken } from "@/lib/shop-runtime";
 import { jsonOk, jsonErr } from "@/lib/api-response";
 import { bodyIssue, zPositiveAmount } from "@/lib/validate/amount";
 import { onrampAmountBoundsError } from "@/lib/quote-amount-bounds";
+import { sellAmountError } from "@/lib/sell";
 import {
   isBelowMinimumQuoteError,
   quoteClientMessage,
@@ -19,6 +20,8 @@ const BodySchema = z.object({
   inputCurrency: z.string().min(3).max(4),
   outputCurrency: z.string().optional(),
   chain: z.union([z.string(), z.number()]).optional(),
+  /** Ticker of one of this shop's tokens; omitted = the primary token. Chain/contract come from config. */
+  token: z.string().max(16).optional(),
 });
 
 export async function POST(req: Request) {
@@ -45,11 +48,18 @@ export async function POST(req: Request) {
     const body = parsedBody.data;
     inputCurrency = body.inputCurrency;
 
+    const resolved = await resolveRequestToken(body.token, body.action === "OFFRAMP" ? "sell" : "buy");
+    if (!resolved.ok) {
+      return jsonErr({ code: resolved.code, message: resolved.message, status: resolved.status }, resolved.status);
+    }
+    const token = resolved.token;
+
     if (body.action === "ONRAMP") {
       const boundsErr = onrampAmountBoundsError(
         body.inputAmount,
         body.inputCurrency,
         shop,
+        token,
       );
       if (boundsErr) {
         return jsonErr(boundsErr, boundsErr.status);
@@ -57,14 +67,17 @@ export async function POST(req: Request) {
     }
 
     if (body.action === "OFFRAMP") {
+      // Extra tokens carry their own sell range (thin pools); the primary keeps its old behaviour.
+      const sellErr = token.primary ? null : sellAmountError(body.inputAmount, shop, token);
+      if (sellErr) return jsonErr({ code: "amount.out_of_range", message: sellErr, status: 400 }, 400);
       const quote = await getQuote(
         {
           action: "OFFRAMP",
           inputAmount: body.inputAmount,
-          inputCurrency: shop.token.ticker,
+          inputCurrency: token.ticker,
           outputCurrency: body.inputCurrency,
-          chain: String(shop.token.chainId),
-          tokenAddress: shop.token.contract,
+          chain: String(token.chainId),
+          tokenAddress: token.contract,
         },
         { buyerIp: ip },
       );
@@ -76,9 +89,9 @@ export async function POST(req: Request) {
         action: "ONRAMP",
         inputAmount: body.inputAmount,
         inputCurrency: body.inputCurrency,
-        outputCurrency: shop.token.ticker,
-        chain: String(shop.token.chainId),
-        tokenAddress: shop.token.contract,
+        outputCurrency: token.ticker,
+        chain: String(token.chainId),
+        tokenAddress: token.contract,
       },
       { buyerIp: ip },
     );

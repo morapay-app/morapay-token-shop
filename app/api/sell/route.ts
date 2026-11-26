@@ -9,7 +9,7 @@ import {
   offrampDepositError,
   parseOfframpDepositInfo,
 } from "@/lib/morapay/ramp";
-import { getShopConfig, getHealth } from "@/lib/shop-runtime";
+import { getShopConfig, getHealth, resolveRequestToken } from "@/lib/shop-runtime";
 import { isNuban, needsAccountName, sellAmountError, shopCurrencies } from "@/lib/sell";
 import { jsonOk, jsonErr } from "@/lib/api-response";
 import { bodyIssue, zPositiveAmount } from "@/lib/validate/amount";
@@ -27,6 +27,8 @@ const BodySchema = z.object({
   accountNumber: z.string().min(1),
   customerName: z.string().optional(),
   turnstileToken: z.string().optional(),
+  /** Ticker of one of this shop's tokens; omitted = the primary token. */
+  token: z.string().max(16).optional(),
 });
 
 export async function POST(req: Request) {
@@ -62,10 +64,16 @@ export async function POST(req: Request) {
       return jsonErr({ ...bodyIssue(parsedBody.error), status: 400 }, 400);
     }
     const body = parsedBody.data;
+    // Chain, contract and range come from this shop's config for the chosen ticker only.
+    const resolved = await resolveRequestToken(body.token, "sell");
+    if (!resolved.ok) {
+      return jsonErr({ code: resolved.code, message: resolved.message, status: resolved.status }, resolved.status);
+    }
+    const token = resolved.token;
     const addr = validateWalletAddress(
       body.walletAddress,
-      shop.token.chainId,
-      shop.token.contract,
+      token.chainId,
+      token.contract,
     );
     if (!addr.ok) {
       return jsonErr({ message: addr.reason, status: 400 }, 400);
@@ -74,7 +82,7 @@ export async function POST(req: Request) {
     if (!shopCurrencies(shop).includes(body.currency.toUpperCase())) {
       return jsonErr({ message: "Payout currency is not available.", status: 400 }, 400);
     }
-    const amountError = sellAmountError(body.tokenAmount, shop);
+    const amountError = sellAmountError(body.tokenAmount, shop, token);
     if (amountError) {
       return jsonErr({ message: amountError, status: 400 }, 400);
     }
@@ -100,10 +108,10 @@ export async function POST(req: Request) {
       {
         action: "OFFRAMP",
         inputAmount: body.tokenAmount,
-        inputCurrency: shop.token.ticker,
+        inputCurrency: token.ticker,
         outputCurrency: body.currency,
-        chain: String(shop.token.chainId),
-        tokenAddress: shop.token.contract,
+        chain: String(token.chainId),
+        tokenAddress: token.contract,
       },
       morapayCtx,
     );
@@ -124,9 +132,9 @@ export async function POST(req: Request) {
       client_channel: "browser",
       bank_code: body.bankCode,
       account_number: body.accountNumber,
-      source_chain_id: String(shop.token.chainId),
-      source_token_symbol: shop.token.ticker,
-      source_token_address: shop.token.contract,
+      source_chain_id: String(token.chainId),
+      source_token_symbol: token.ticker,
+      source_token_address: token.contract,
       referral_code: referral,
       turnstileToken: body.turnstileToken,
       },
@@ -150,7 +158,7 @@ export async function POST(req: Request) {
     const deposit = parseOfframpDepositInfo(confirmed, initiated);
     const { depositAddress, depositDestinationTag } = deposit;
 
-    const depositErr = offrampDepositError(shop.token.chainId, deposit);
+    const depositErr = offrampDepositError(token.chainId, deposit);
     if (depositErr) {
       return jsonErr({ message: depositErr, status: 502 }, 502);
     }
@@ -158,7 +166,7 @@ export async function POST(req: Request) {
     // Safety: refuse if deposit address equals token contract
     if (
       depositAddress &&
-      depositAddress.toLowerCase() === shop.token.contract.toLowerCase()
+      depositAddress.toLowerCase() === token.contract.toLowerCase()
     ) {
       return jsonErr(
         {
@@ -179,6 +187,7 @@ export async function POST(req: Request) {
       depositAmount: deposit.depositAmount ?? body.tokenAmount,
       depositExpiresAt: deposit.depositExpiresAt,
       wallet: addr.normalized,
+      token: token.ticker,
       payout: { amount: quote.output.amount, currency: quote.output.currency },
     });
   } catch (err) {

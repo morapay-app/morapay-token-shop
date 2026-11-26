@@ -28,7 +28,9 @@ describe("pi shop config", () => {
 
   it("matches the XRP shop countries and has no shop-level PI cap", () => {
     expect(pi.countries).toEqual(xrp.countries);
-    expect(pi.sell.enabled).toBe(true);
+    // Off until the sell wallets' Privy policy allows PCM approvals on Optimism (PI is coming soon).
+    expect(pi.sell.enabled).toBe(false);
+    expect(pi.token.comingSoon).toBe(true);
     expect("maxToken" in pi.sell).toBe(false);
     expect("minToken" in pi.sell).toBe(false);
   });
