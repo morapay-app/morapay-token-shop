@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     // Chain, contract and range come from this shop's config for the chosen ticker only.
     const resolved = await resolveRequestToken(body.token, "sell");
     if (!resolved.ok) {
-      return jsonErr({ message: resolved.message, status: resolved.status }, resolved.status);
+      return jsonErr({ code: resolved.code, message: resolved.message, status: resolved.status }, resolved.status);
     }
     const token = resolved.token;
     const addr = validateWalletAddress(

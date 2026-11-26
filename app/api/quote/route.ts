@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
     const resolved = await resolveRequestToken(body.token, body.action === "OFFRAMP" ? "sell" : "buy");
     if (!resolved.ok) {
-      return jsonErr({ message: resolved.message, status: resolved.status }, resolved.status);
+      return jsonErr({ code: resolved.code, message: resolved.message, status: resolved.status }, resolved.status);
     }
     const token = resolved.token;
 

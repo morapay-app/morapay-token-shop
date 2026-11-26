@@ -125,14 +125,14 @@ export async function offeredShopTokens(): Promise<OfferedToken[]> {
 export async function resolveRequestToken(
   ticker: string | null | undefined,
   direction: "buy" | "sell",
-): Promise<{ ok: true; token: ShopToken } | { ok: false; status: number; message: string }> {
+): Promise<{ ok: true; token: ShopToken } | { ok: false; status: number; code: string; message: string }> {
   const token = findShopToken(shopConfig, ticker);
-  if (!token) return { ok: false, status: 400, message: "Token not available." };
+  if (!token) return { ok: false, status: 400, code: "token.unknown", message: "Token not available." };
   if (token.primary) return { ok: true, token };
   const offered = (await offeredShopTokens()).find((t) => t.ticker === token.ticker);
   const available = direction === "buy" ? offered?.buyAvailable : offered?.sellAvailable;
   if (!available) {
-    return { ok: false, status: 503, message: `${token.ticker} ${direction === "buy" ? "buys" : "sells"} are paused.` };
+    return { ok: false, status: 503, code: "token.paused", message: `${token.ticker} ${direction === "buy" ? "buys" : "sells"} are paused.` };
   }
   return { ok: true, token };
 }
