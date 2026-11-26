@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { orderCancelTokenOrNull } from "@/lib/order-cancel";
 import { cookies } from "next/headers";
 import {
   getQuote,
@@ -272,6 +273,7 @@ export async function POST(req: Request) {
 
       return jsonOk({
         ref,
+        cancelToken: orderCancelTokenOrNull(ref),
         nextStep: requiresOtp ? "otp" : "awaiting_prompt",
         requiresOtp,
         instructions,
@@ -294,6 +296,7 @@ export async function POST(req: Request) {
 
     return jsonOk({
       ref,
+      cancelToken: orderCancelTokenOrNull(ref),
       nextStep: "bank_deposit",
       bankDeposit,
       wallet: addr.normalized,

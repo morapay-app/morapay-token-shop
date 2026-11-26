@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Receipt } from "@/components/Receipt";
+import { CancelOrder } from "@/components/CancelOrder";
 import type { OrderReceipt } from "@/lib/morapay/receipt";
 import type { RampPhase } from "@/lib/morapay/status";
 
@@ -86,6 +87,15 @@ export function OrderStatusClient({ orderRef }: { orderRef: string }) {
         </p>
       ) : null}
       <p className="font-mono text-xs break-all text-[var(--mp-text-muted)]">{receipt.ref}</p>
+      {receipt.phase === "in_progress" ? (
+        <CancelOrder
+          orderRef={orderRef}
+          onCancelled={() => {
+            setReceipt({ ...receipt, phase: "cancelled" });
+            setMessage("Order cancelled.");
+          }}
+        />
+      ) : null}
     </div>
   );
 }

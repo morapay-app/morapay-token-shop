@@ -20,6 +20,7 @@ import {
   sortInstitutions,
   type SellInstitution,
 } from "@/lib/sell";
+import { saveOrderCancel } from "@/lib/order-cancel-copy";
 
 const CURRENCIES = shopCurrencies(shopConfig);
 const DEFAULT_CURRENCY =
@@ -185,6 +186,7 @@ export function SellWidget() {
         );
         return;
       }
+      saveOrderCancel(j.data.ref, j.data.cancelToken, "sell");
       setDeposit({
         ref: j.data.ref,
         depositAddress: j.data.depositAddress,

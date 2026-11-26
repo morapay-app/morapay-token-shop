@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { orderCancelTokenOrNull } from "@/lib/order-cancel";
 import { cookies } from "next/headers";
 import {
   getBanks,
@@ -171,6 +172,7 @@ export async function POST(req: Request) {
 
     return jsonOk({
       ref,
+      cancelToken: orderCancelTokenOrNull(ref),
       depositAddress,
       depositDestinationTag,
       depositMemo: deposit.depositMemo,

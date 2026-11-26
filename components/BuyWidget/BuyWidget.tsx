@@ -16,6 +16,8 @@ import { track } from "@/lib/analytics";
 import { WAIT_TOTAL_MS } from "@/lib/wait-phases";
 import { quoteClientMessage } from "@/lib/quote-client-message";
 import { useQuoteRateLock } from "./useQuoteRateLock";
+import { CancelOrder } from "@/components/CancelOrder";
+import { saveOrderCancel } from "@/lib/order-cancel-copy";
 
 type ShopApiConfig = {
   token: {
@@ -292,6 +294,7 @@ export function BuyWidget() {
         return;
       }
       persistOrder(j.data.ref, j.data.wallet ?? state.wallet);
+      saveOrderCancel(j.data.ref, j.data.cancelToken, "buy");
       window.history.pushState({}, "", `/order/${j.data.ref}`);
       const next =
         j.data.nextStep === "otp"
@@ -515,6 +518,13 @@ export function BuyWidget() {
 
       {state.step === "bank_deposit" && (
         <BankDepositStep deposit={state.bankDeposit} orderRef={state.ref} />
+      )}
+
+      {(state.step === "awaiting_prompt" || state.step === "bank_deposit" || state.step === "still_processing") && (
+        <CancelOrder
+          orderRef={state.ref}
+          onCancelled={() => dispatch({ type: "STATUS", phase: "cancelled", message: "Order cancelled." })}
+        />
       )}
 
       {(state.step === "delivering" ||
