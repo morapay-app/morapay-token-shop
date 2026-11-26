@@ -147,6 +147,11 @@ export function BuyWidget() {
     activeCountry?.buyLimits,
     token && "buyCaps" in token ? token.buyCaps?.[state.currency.toUpperCase()] : undefined,
   );
+  // narrowCaps returns a new object each render when both country and token caps exist (PCM): read
+  // it through a ref so fetchQuote (and the quote effect) don't re-run on every render, which kept
+  // re-sending the quote and left the spinner on forever.
+  const buyLimitsRef = useRef(buyLimits);
+  buyLimitsRef.current = buyLimits;
 
   /** Another token can sit on another kind of chain: its address, tag and quote never carry over. */
   function changeToken(next: string) {
@@ -183,7 +188,7 @@ export function BuyWidget() {
         const j = await res.json();
         if (reqId !== quoteReq.current) return;
         if (!j.success) {
-          const limits = buyLimits;
+          const limits = buyLimitsRef.current;
           setQuoteError(
             quoteClientMessage(j.code, j.message, {
               minFiat: limits?.minFiat,
@@ -215,7 +220,7 @@ export function BuyWidget() {
         if (reqId === quoteReq.current) setQuoteLoading(false);
       }
     },
-    [buyLimits, tokenTicker],
+    [tokenTicker],
   );
 
   useEffect(() => {
