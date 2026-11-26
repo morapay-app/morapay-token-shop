@@ -4,6 +4,7 @@ import { interpretStatus } from "@/lib/morapay/status";
 import { jsonOk, jsonErr } from "@/lib/api-response";
 import { clientIp, rateLimit, RL } from "@/lib/ratelimit";
 import { getShopConfig } from "@/lib/shop-runtime";
+import { isCancellableOrder } from "@/lib/order-cancel";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,8 @@ export async function GET(
       phase: interpreted.phase,
       message: interpreted.message,
       receipt,
+      // Unpaid and nothing delivered: the cancel button may show (Core still decides).
+      cancellable: interpreted.phase === "in_progress" && isCancellableOrder(tx as Parameters<typeof isCancellableOrder>[0]),
     });
   } catch (err) {
     return jsonErr(err, 502);

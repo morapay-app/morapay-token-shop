@@ -90,12 +90,15 @@ export async function rateLimit(
   return memoryLimit(key, limit, windowMs);
 }
 
-/** Quotes: 30/min. Orders: 5 per 10 min. Status: 60/min. Account names: 15/min. */
+/** Quotes: 30/min. Orders: 5 per 10 min. Status: 60/min. Account names: 15/min. Cancels: 20/IP, 6/order per 10 min. */
 export const RL = {
   quote: { limit: 30, windowMs: 60_000 },
   order: { limit: 5, windowMs: 10 * 60_000 },
   status: { limit: 60, windowMs: 60_000 },
   accountName: { limit: 15, windowMs: 60_000 },
+  /** Order cancel: per IP and per order, 10 minutes. */
+  cancelIp: { limit: 20, windowMs: 10 * 60_000 },
+  cancelOrder: { limit: 6, windowMs: 10 * 60_000 },
 } as const;
 
 export function clientIp(headers: Headers): string {
