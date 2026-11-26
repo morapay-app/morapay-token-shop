@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { OrderProgress, TrackOrderLink, type ProgressStep } from "@/components/OrderProgress";
 import { Receipt } from "@/components/Receipt";
+import { CancelOrder } from "@/components/CancelOrder";
 import type { OrderReceipt } from "@/lib/morapay/receipt";
 
 const POLL_MS = 6000;
@@ -27,6 +28,7 @@ export function SellTracker({
 }) {
   const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [cancelledHere, setCancelledHere] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +54,7 @@ export function SellTracker({
     };
   }, [orderRef]);
 
-  const phase = receipt?.phase ?? "in_progress";
+  const phase = cancelledHere ? "cancelled" : (receipt?.phase ?? "in_progress");
   if (receipt && phase === "completed") return <Receipt receipt={receipt} />;
 
   if (phase === "failed" || phase === "cancelled") {
@@ -78,6 +80,15 @@ export function SellTracker({
           This updates by itself. You can close this page.
         </p>
         <TrackOrderLink orderRef={orderRef} />
+        {phase === "in_progress" ? (
+          <CancelOrder
+            orderRef={orderRef}
+            onCancelled={() => {
+              setCancelledHere(true);
+              setMessage("Order cancelled. Don't send anything to this address.");
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );
