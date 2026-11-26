@@ -14,6 +14,8 @@ const SELL_DEPOSIT = "0x42c007a3d8cdbcc2ae601594557193c32207d8b0";
 
 const core = vi.hoisted(() => ({
   pcm: { buyEnabled: true, sellEnabled: true } as { buyEnabled?: boolean; sellEnabled?: boolean } | null,
+  /** Core lists PI as a buy target (false matches production while Pi is not live). */
+  listPi: true,
   getQuote: vi.fn(),
   initiateOnramp: vi.fn(),
   initiateOfframp: vi.fn(),
@@ -49,7 +51,7 @@ vi.mock("@/lib/morapay/ramp", async (importOriginal) => {
       supportedCurrencies: ["GHS", "NGN"],
       fiatCorridors: [],
       supportedOnrampTargets: [
-        { chainId: 31415926, symbol: "PI", tokenAddress: "pi", decimals: 7 },
+        ...(core.listPi ? [{ chainId: 31415926, symbol: "PI", tokenAddress: "pi", decimals: 7 }] : []),
         ...(core.pcm ? [{ chainId: 10, symbol: "PCM", tokenAddress: PCM, decimals: 18, ...core.pcm }] : []),
       ],
       supportedOfframpSources: [],
@@ -259,11 +261,36 @@ describe("routes", { timeout: 30_000 }, () => {
 describe("the Pi shop as shipped: PCM now, PI coming soon", { timeout: 30_000 }, () => {
   beforeEach(() => {
     piVariant.open = false;
+    core.listPi = false; // as in production: core does not list PI yet
     vi.resetModules();
   });
   afterEach(() => {
     piVariant.open = true;
+    core.listPi = true;
     vi.resetModules();
+  });
+
+  it("stays open (no fallback) while core lists PCM but not PI", async () => {
+    const { GET } = await import("@/app/api/config/route");
+    const json = await (await GET(new Request("https://pi.morapay.shop/api/config"))).json();
+    expect(json.data.fallback).toBe(false);
+  });
+
+  it("takes a PCM buy end to end with no token named (PCM is the default)", async () => {
+    const res = await call("orders", {
+      fiatAmount: "50",
+      currency: "GHS",
+      country: "GH",
+      methodId: "momo_mtn",
+      methodKind: "mobile_money",
+      phoneNumber: "0244123456",
+      walletAddress: EVM_WALLET,
+    });
+    expect(res.status).toBe(200);
+    expect(core.initiateOnramp).toHaveBeenCalledWith(
+      expect.objectContaining({ target_chain_id: "10", target_token_symbol: "PCM", target_token_address: PCM }),
+      expect.anything(),
+    );
   });
 
   it("defaults to PCM and shows PI as coming soon, with buying and selling off", async () => {
@@ -290,16 +317,24 @@ describe("the Pi shop as shipped: PCM now, PI coming soon", { timeout: 30_000 },
     expect(core.getQuote).not.toHaveBeenCalled();
   });
 
-  it("opens no sell while the sell tab is off", async () => {
-    const res = await call("sell", {
-      tokenAmount: "1000",
-      currency: "GHS",
-      walletAddress: EVM_WALLET,
-      bankCode: "MTN",
-      accountNumber: "0244123456",
-      token: "PCM",
-    });
-    expect(res.status).toBeGreaterThanOrEqual(400);
+  it("opens a PCM sell (sell tab on) and refuses a PI sell as coming soon", async () => {
+    const sell = (token?: string) =>
+      call("sell", {
+        tokenAmount: "1000",
+        currency: "GHS",
+        walletAddress: EVM_WALLET,
+        bankCode: "MTN",
+        accountNumber: "0244123456",
+        ...(token ? { token } : {}),
+      });
+    const pcm = await sell();
+    expect(pcm.status).toBe(200);
+    expect(core.initiateOfframp).toHaveBeenCalledWith(
+      expect.objectContaining({ source_chain_id: "10", source_token_symbol: "PCM", source_token_address: PCM }),
+      expect.anything(),
+    );
+    core.initiateOfframp.mockClear();
+    expect(await sell("PI")).toMatchObject({ status: 400, json: { code: "token.coming_soon" } });
     expect(core.initiateOfframp).not.toHaveBeenCalled();
   });
 });
