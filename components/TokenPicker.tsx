@@ -35,18 +35,18 @@ export function TokenPicker({ id, tokens, value, onChange, disabled }: Props) {
               role="radio"
               aria-checked={on}
               disabled={disabled}
-              title={soon ? `${t.ticker} is coming soon. Quotes only for now.` : t.hint ?? `${t.ticker} on ${t.chainName}`}
+              title={soon ? `${t.ticker}: live prices. Orders open later.` : t.hint ?? `${t.ticker} on ${t.chainName}`}
               className={`pill inline-flex items-center gap-2 text-sm px-3 py-2 min-h-11 ${
                 on
                   ? "bg-[var(--mp-pill-active)] text-[var(--mp-text)] font-semibold"
                   : "bg-[var(--mp-pill-inactive)] text-[var(--mp-pill-inactive-text)]"
-              }${soon && !on ? " opacity-60" : ""}`}
+              }`}
               onClick={() => onChange(t.ticker)}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={t.logo} alt="" width={20} height={20} className="rounded-full" />
               {t.label}
-              {soon ? <span className="text-xs font-normal">· soon</span> : null}
+              {soon ? <span className="text-xs font-normal">· price only</span> : null}
             </button>
           );
         })}
