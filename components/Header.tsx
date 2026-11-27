@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FlipCoin } from "@/components/TokenCoins";
 import type { HeaderStyle } from "@/config/themes";
 import { shopConfig } from "@/shop.config";
 
@@ -46,14 +47,7 @@ export function Header({
   return (
     <header className={style.header}>
       <Link href="/" className="flex items-center gap-3 min-w-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={shopConfig.token.logo}
-          alt=""
-          width={40}
-          height={40}
-          className={style.logo}
-        />
+        <FlipCoin size={40} className={style.logo} />
         <div className="min-w-0">
           <p className="font-heading font-bold truncate">
             {shopConfig.token.name}
