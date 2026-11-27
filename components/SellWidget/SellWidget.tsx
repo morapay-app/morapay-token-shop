@@ -46,6 +46,8 @@ export function SellWidget() {
   const [bankCode, setBankCode] = useState("");
   const [institutions, setInstitutions] = useState<SellInstitution[]>([]);
   const [institutionsError, setInstitutionsError] = useState<string | null>(null);
+  /** Currency the institutions list was last loaded for; differs while a new list loads. */
+  const [institutionsFor, setInstitutionsFor] = useState<string | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [payout, setPayout] = useState<{ amount: string; currency: string } | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -74,7 +76,8 @@ export function SellWidget() {
   const accountVerified = check.state === "off" || check.state === "ok";
 
   const amountError = amount ? sellAmountError(amount, shopConfig, token) : null;
-  const institution = institutions.find((i) => i.code === bankCode);
+  const institutionsLoading = institutionsFor !== currency;
+  const institution = institutionsLoading ? undefined : institutions.find((i) => i.code === bankCode);
 
   useEffect(() => {
     let active = true;
@@ -104,12 +107,14 @@ export function SellWidget() {
         setInstitutions(list);
         setBankCode((current) => keepInstitution(current, list));
         setInstitutionsError(list.length === 0 ? "Payout options could not be loaded." : null);
+        setInstitutionsFor(currency);
       })
       .catch(() => {
         if (!active) return;
         setInstitutions([]);
         setBankCode("");
         setInstitutionsError("Payout options could not be loaded.");
+        setInstitutionsFor(currency);
       });
     return () => {
       active = false;
@@ -325,11 +330,12 @@ export function SellWidget() {
         <InstitutionPicker
           id="sell-bank"
           label={nameRequired ? "Bank" : "Network or bank"}
-          institutions={institutions}
-          value={bankCode}
+          institutions={institutionsLoading ? [] : institutions}
+          value={institutionsLoading ? "" : bankCode}
           onChange={setBankCode}
+          loading={institutionsLoading}
         />
-        {institutionsError && (
+        {!institutionsLoading && institutionsError && (
           <p className="mt-2 text-sm text-[var(--mp-warning-text)]" role="alert">
             {institutionsError}
           </p>
@@ -376,7 +382,7 @@ export function SellWidget() {
         type="button"
         className="btn-primary w-full"
         disabled={
-          quoteOnly || loading || !payout || !bankCode || !account || !accountVerified || !wallet
+          quoteOnly || loading || institutionsLoading || !payout || !bankCode || !account || !accountVerified || !wallet
         }
         onClick={() => void submit()}
       >
