@@ -32,14 +32,14 @@ describe("TokenPicker", () => {
     expect(onChange).toHaveBeenCalledWith("PCM");
   });
 
-  it("lets a coming-soon token be picked for a price, still marked soon", async () => {
+  it("lets a coming-soon token be picked for a price, with no extra label", async () => {
     const onChange = vi.fn();
     const soon = { ...PI, comingSoon: true };
     const { rerender } = render(<TokenPicker id="t" tokens={[soon, PCM]} value="PCM" onChange={onChange} />);
     const [piRadio] = screen.getAllByRole("radio");
-    expect(piRadio).toHaveTextContent("PI· price only");
+    expect(piRadio).toHaveTextContent(/^PI$/);
     expect(piRadio).not.toBeDisabled();
-    expect(piRadio).toHaveAttribute("title", "PI: live prices. Orders open later.");
+    expect(piRadio).not.toHaveAttribute("title");
     await userEvent.click(piRadio!);
     expect(onChange).toHaveBeenCalledWith("PI");
     rerender(<TokenPicker id="t" tokens={[soon, PCM]} value="PI" onChange={onChange} />);

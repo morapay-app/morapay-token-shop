@@ -59,11 +59,11 @@ const piConfig = {
     overridePrimary: true,
     heroImage: "/brand/pi/hero.svg",
     headline: "Buy PCM with mobile money or bank",
-    subline: "Pay in cedis or naira. PCM is sent to your Optimism wallet. Check live Pi prices here.",
+    subline: "Pay in cedis or naira. PCM is sent to your Optimism wallet.",
   },
   copy: {
     about:
-      "A Morapay shop where you can buy PCM with mobile money or bank transfer, and check live Pi prices. Not affiliated with Pi Network.",
+      "A Morapay shop where you can buy PCM with mobile money or bank transfer. Not affiliated with Pi Network.",
     operator: "Morapay.",
     risk: "Crypto assets are highly volatile and you can lose all the money you spend. This shop is run by Morapay and is not affiliated with Pi Network. Nothing here is financial advice. Check your wallet address before you buy, and only spend what you can afford to lose. Transfers can't be reversed.",
   },

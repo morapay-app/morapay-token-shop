@@ -23,7 +23,6 @@ import {
 import { saveOrderCancel } from "@/lib/order-cancel-copy";
 import { shopTokens } from "@/lib/shop-tokens";
 import { TokenPicker } from "@/components/TokenPicker";
-import { ComingSoonNote } from "@/components/ComingSoonNote";
 
 const CURRENCIES = shopCurrencies(shopConfig);
 /** Tokens this shop sells, primary first (core availability is checked on load). */
@@ -373,7 +372,6 @@ export function SellWidget() {
           {error}
         </p>
       )}
-      {quoteOnly && <ComingSoonNote ticker={token.ticker} />}
       <button
         type="button"
         className="btn-primary w-full"
@@ -382,7 +380,7 @@ export function SellWidget() {
         }
         onClick={() => void submit()}
       >
-        {loading ? "Starting…" : "Continue"}
+        {quoteOnly ? "Coming soon" : loading ? "Starting…" : "Continue"}
       </button>
     </div>
   );
