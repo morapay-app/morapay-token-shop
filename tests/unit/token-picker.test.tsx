@@ -31,4 +31,19 @@ describe("TokenPicker", () => {
     await userEvent.click(radios[1]!);
     expect(onChange).toHaveBeenCalledWith("PCM");
   });
+
+  it("lets a coming-soon token be picked for a price, still marked soon", async () => {
+    const onChange = vi.fn();
+    const soon = { ...PI, comingSoon: true };
+    const { rerender } = render(<TokenPicker id="t" tokens={[soon, PCM]} value="PCM" onChange={onChange} />);
+    const [piRadio] = screen.getAllByRole("radio");
+    expect(piRadio).toHaveTextContent("PI· soon");
+    expect(piRadio).not.toBeDisabled();
+    expect(piRadio).toHaveAttribute("title", "PI is coming soon. Quotes only for now.");
+    await userEvent.click(piRadio!);
+    expect(onChange).toHaveBeenCalledWith("PI");
+    rerender(<TokenPicker id="t" tokens={[soon, PCM]} value="PI" onChange={onChange} />);
+    expect(screen.getAllByRole("radio")[0]).toHaveAttribute("aria-checked", "true");
+  });
 });
+

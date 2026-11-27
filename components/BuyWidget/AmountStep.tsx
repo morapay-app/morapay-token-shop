@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { QuoteView } from "./machine";
 import { flagFor } from "@/config/countries";
+import { ComingSoonNote } from "@/components/ComingSoonNote";
 
 type Props = {
   currency: string;
@@ -20,6 +21,8 @@ type Props = {
   onCountry: (code: string, currency: string) => void;
   onNext: () => void;
   rateLockSeconds?: number;
+  /** Coming-soon token: show the price, never continue. */
+  quoteOnly?: boolean;
 };
 
 export function AmountStep(props: Props) {
@@ -30,7 +33,7 @@ export function AmountStep(props: Props) {
   const within =
     !props.limits ||
     (amountNum >= props.limits.minFiat && amountNum <= props.limits.maxFiat);
-  const canNext = amountNum > 0 && within && !!props.quote;
+  const canNext = amountNum > 0 && within && !!props.quote && !props.quoteOnly;
 
   const lockSec =
     props.quote && props.rateLockSeconds != null ? props.rateLockSeconds : 0;
@@ -156,11 +159,15 @@ export function AmountStep(props: Props) {
         </p>
       )}
 
+      {props.quoteOnly && <ComingSoonNote ticker={props.ticker} />}
+
       <button
         type="button"
         className="btn-primary w-full"
         disabled={!canNext}
-        onClick={props.onNext}
+        onClick={() => {
+          if (canNext) props.onNext();
+        }}
       >
         Continue
       </button>

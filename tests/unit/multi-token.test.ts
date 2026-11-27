@@ -344,13 +344,42 @@ describe("the Pi shop as shipped: PCM now, PI coming soon", { timeout: 30_000 },
     ]);
   });
 
-  it("quotes PCM by default and refuses PI as coming soon", async () => {
+  it("quotes PCM by default, and PI for a price only (forwarded to core)", async () => {
     expect((await call("quote", { action: "ONRAMP", inputAmount: "500", inputCurrency: "GHS" })).status).toBe(200);
     expect(core.getQuote).toHaveBeenLastCalledWith(expect.objectContaining({ outputCurrency: "PCM", chain: "10" }), expect.anything());
-    core.getQuote.mockClear();
-    const pi = await call("quote", { action: "ONRAMP", inputAmount: "500", inputCurrency: "GHS", token: "PI" });
-    expect(pi).toMatchObject({ status: 400, json: { code: "token.coming_soon", message: "PI is coming soon." } });
-    expect(core.getQuote).not.toHaveBeenCalled();
+    core.getQuote.mockClear().mockResolvedValue(quoteOut("693", "PI"));
+    const buy = await call("quote", { action: "ONRAMP", inputAmount: "500", inputCurrency: "GHS", token: "PI" });
+    expect(buy).toMatchObject({ status: 200, json: { data: { output: { amount: "693", currency: "PI" } } } });
+    expect(core.getQuote).toHaveBeenLastCalledWith(
+      expect.objectContaining({ action: "ONRAMP", outputCurrency: "PI", chain: "31415926", tokenAddress: "pi" }),
+      expect.anything(),
+    );
+    const sell = await call("quote", { action: "OFFRAMP", inputAmount: "1000", inputCurrency: "GHS", token: "PI" });
+    expect(sell.status).toBe(200);
+    expect(core.getQuote).toHaveBeenLastCalledWith(
+      expect.objectContaining({ action: "OFFRAMP", inputCurrency: "PI", chain: "31415926" }),
+      expect.anything(),
+    );
+  });
+
+  it("refuses a PI buy order as coming soon, whatever the client sends", async () => {
+    const res = await call("orders", {
+      fiatAmount: "500",
+      currency: "GHS",
+      country: "GH",
+      methodId: "momo_mtn",
+      methodKind: "mobile_money",
+      phoneNumber: "0244123456",
+      walletAddress: PI_WALLET,
+      token: "PI",
+    });
+    expect(res).toMatchObject({ status: 400, json: { code: "token.coming_soon", message: "PI is coming soon." } });
+    expect(core.initiateOnramp).not.toHaveBeenCalled();
+  });
+
+  it("keeps the health check on the open token (PCM)", async () => {
+    const { getHealth } = await import("@/lib/shop-runtime");
+    expect(await getHealth()).toMatchObject({ morapay: "ok", tokenSupported: true });
   });
 
   it("opens a PCM sell (sell tab on) and refuses a PI sell as coming soon", async () => {
