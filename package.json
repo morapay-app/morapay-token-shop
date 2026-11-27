@@ -61,7 +61,10 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "next>postcss": "8.5.33"
+    }
   },
   "license": "MIT",
   "description": "Cloneable Morapay token shop — buy tokens with mobile money or bank",
