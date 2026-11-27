@@ -37,9 +37,9 @@ describe("TokenPicker", () => {
     const soon = { ...PI, comingSoon: true };
     const { rerender } = render(<TokenPicker id="t" tokens={[soon, PCM]} value="PCM" onChange={onChange} />);
     const [piRadio] = screen.getAllByRole("radio");
-    expect(piRadio).toHaveTextContent("PI· soon");
+    expect(piRadio).toHaveTextContent("PI· price only");
     expect(piRadio).not.toBeDisabled();
-    expect(piRadio).toHaveAttribute("title", "PI is coming soon. Quotes only for now.");
+    expect(piRadio).toHaveAttribute("title", "PI: live prices. Orders open later.");
     await userEvent.click(piRadio!);
     expect(onChange).toHaveBeenCalledWith("PI");
     rerender(<TokenPicker id="t" tokens={[soon, PCM]} value="PI" onChange={onChange} />);

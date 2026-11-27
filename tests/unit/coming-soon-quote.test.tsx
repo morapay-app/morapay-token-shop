@@ -110,7 +110,7 @@ async function settle() {
   }
 }
 
-const NOTE = "PI is coming soon. Quotes only for now.";
+const NOTE = "Live PI price. Orders open later.";
 
 async function fillSellForm(wallet: string) {
   await act(async () => {
