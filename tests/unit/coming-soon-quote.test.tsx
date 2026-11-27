@@ -110,7 +110,6 @@ async function settle() {
   }
 }
 
-const NOTE = "Live PI price. Orders open later.";
 
 async function fillSellForm(wallet: string) {
   await act(async () => {
@@ -127,7 +126,7 @@ async function fillSellForm(wallet: string) {
 }
 
 describe("buy: PI coming soon", () => {
-  it("prices PI from the picker but keeps Continue disabled", async () => {
+  it("prices PI from the picker but shows Coming soon", async () => {
     const quotes = stubFetch();
     const { BuyWidget } = await import("@/components/BuyWidget/BuyWidget");
     render(<BuyWidget />);
@@ -142,8 +141,7 @@ describe("buy: PI coming soon", () => {
     await settle();
     expect(quotes.at(-1)).toMatchObject({ action: "ONRAMP", token: "PI" });
     expect(await screen.findByText(/693/)).toBeTruthy();
-    expect(screen.getByText(NOTE)).toHaveAttribute("title");
-    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Coming soon" })).toBeDisabled();
   });
 
   it("PCM still continues as before", async () => {
@@ -158,13 +156,13 @@ describe("buy: PI coming soon", () => {
     await settle();
     expect(quotes.at(-1)).toMatchObject({ token: "PCM" });
     expect(await screen.findByText(/183\.09/)).toBeTruthy();
-    expect(screen.queryByText(NOTE)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Coming soon" })).toBeNull();
     expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
   });
 });
 
 describe("sell: PI coming soon", () => {
-  it("prices a PI sell but keeps Continue disabled", async () => {
+  it("prices a PI sell but shows Coming soon", async () => {
     const quotes = stubFetch();
     const { SellWidget } = await import("@/components/SellWidget/SellWidget");
     render(<SellWidget />);
@@ -180,8 +178,7 @@ describe("sell: PI coming soon", () => {
     await fillSellForm("GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7");
     expect(quotes.at(-1)).toMatchObject({ action: "OFFRAMP", token: "PI" });
     expect(await screen.findByText(/720 GHS/)).toBeTruthy();
-    expect(screen.getByText(NOTE)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Coming soon" })).toBeDisabled();
   });
 
   it("the same filled form continues for PCM, with no note", async () => {
@@ -196,7 +193,7 @@ describe("sell: PI coming soon", () => {
     });
     await fillSellForm("0x8ba1f109551bD432803012645Ac136ddd64DBA72");
     expect(await screen.findByText(/720 GHS/)).toBeTruthy();
-    expect(screen.queryByText(NOTE)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Coming soon" })).toBeNull();
     expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
   });
 });

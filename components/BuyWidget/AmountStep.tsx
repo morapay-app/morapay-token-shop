@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { QuoteView } from "./machine";
 import { flagFor } from "@/config/countries";
-import { ComingSoonNote } from "@/components/ComingSoonNote";
 
 type Props = {
   currency: string;
@@ -159,8 +158,6 @@ export function AmountStep(props: Props) {
         </p>
       )}
 
-      {props.quoteOnly && <ComingSoonNote ticker={props.ticker} />}
-
       <button
         type="button"
         className="btn-primary w-full"
@@ -169,7 +166,7 @@ export function AmountStep(props: Props) {
           if (canNext) props.onNext();
         }}
       >
-        Continue
+        {props.quoteOnly ? "Coming soon" : "Continue"}
       </button>
     </div>
   );

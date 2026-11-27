@@ -35,7 +35,7 @@ export function TokenPicker({ id, tokens, value, onChange, disabled }: Props) {
               role="radio"
               aria-checked={on}
               disabled={disabled}
-              title={soon ? `${t.ticker}: live prices. Orders open later.` : t.hint ?? `${t.ticker} on ${t.chainName}`}
+              title={soon ? undefined : t.hint ?? `${t.ticker} on ${t.chainName}`}
               className={`pill inline-flex items-center gap-2 text-sm px-3 py-2 min-h-11 ${
                 on
                   ? "bg-[var(--mp-pill-active)] text-[var(--mp-text)] font-semibold"
@@ -46,7 +46,6 @@ export function TokenPicker({ id, tokens, value, onChange, disabled }: Props) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={t.logo} alt="" width={20} height={20} className="rounded-full" />
               {t.label}
-              {soon ? <span className="text-xs font-normal">· price only</span> : null}
             </button>
           );
         })}
