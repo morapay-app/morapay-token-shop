@@ -236,6 +236,28 @@ select.pill {
   background: var(--receipt-bg);
 }
 
+/* Scrollbars: a thin rounded thumb on the surface, no track or buttons (all shops). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, currentColor 30%, transparent) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-button {
+  display: none;
+}
+
 /* Coin that flips between a shop's two token logos. */
 .flip-coin {
   display: inline-block;

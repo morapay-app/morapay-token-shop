@@ -11,6 +11,8 @@ type Props = {
   /** Selected institution code, or "". */
   value: string;
   onChange: (code: string) => void;
+  /** The list is being fetched (e.g. after a currency change). */
+  loading?: boolean;
 };
 
 const GROUPS = [
@@ -23,7 +25,7 @@ function groupOf(i: SellInstitution) {
 }
 
 /** Searchable bank / network sheet. Shows names only; codes never reach the page. */
-export function InstitutionPicker({ id, label, institutions, value, onChange }: Props) {
+export function InstitutionPicker({ id, label, institutions, value, onChange, loading = false }: Props) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const selected = institutions.find((i) => i.code === value);
@@ -46,10 +48,11 @@ export function InstitutionPicker({ id, label, institutions, value, onChange }: 
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-labelledby={`${id}-label ${id}`}
-        disabled={institutions.length === 0}
+        aria-busy={loading}
+        disabled={loading || institutions.length === 0}
         onClick={() => setOpen(true)}
       >
-        {selected ? institutionLabel(selected) : "Choose one"}
+        {loading ? "Loading…" : selected ? institutionLabel(selected) : "Choose one"}
       </button>
       {open && (
         <PickerSheet
